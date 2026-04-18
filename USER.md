@@ -2,11 +2,11 @@
 
 _Learn about the person you're helping. Update this as you go._
 
-- **Name:**
-- **What to call them:**
+- **Name:** Thái
+- **What to call them:** Anh Thái
 - **Pronouns:** _(optional)_
-- **Timezone:** Asia/Bangkok
-- **Notes:** Prefers Vietnamese responses.
+- **Timezone:** +7
+- **Notes:**
 
 ## Context
 

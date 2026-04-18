@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-18T16:30:20.003Z",
+  "entries": {
+    "memory:memory/2026-04-18.md:1:10": {
+      "key": "memory:memory/2026-04-18.md:1:10",
+      "path": "memory/2026-04-18.md",
+      "startLine": 1,
+      "endLine": 10,
+      "source": "memory",
+      "snippet": "# 2026-04-18 - User prefers Vietnamese responses. - User warmly welcomed assistant back. - User asked whether the assistant can add a provider model via API. - User asked assistant to remember this string: `20:AB:37:08:9E:1E`. - Verified simpleproxy endpoint and model listing work. - Verified `gpt-5.4` chat completion works through simpleproxy. - User provided a replacement API key for simpleproxy configuration.",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.6340834068434618,
+      "maxScore": 0.6340834068434618,
+      "firstRecalledAt": "2026-04-18T16:30:20.003Z",
+      "lastRecalledAt": "2026-04-18T16:30:20.003Z",
+      "queryHashes": [
+        "e6c5dc5250c1"
+      ],
+      "recallDays": [
+        "2026-04-18"
+      ],
+      "conceptTags": [
+        "gpt",
+        "gpt-5.4",
+        "user",
+        "prefers",
+        "vietnamese",
+        "responses",
+        "warmly",
+        "welcomed"
+      ]
+    }
+  }
+}
