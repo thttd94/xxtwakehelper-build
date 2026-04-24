@@ -1,0 +1,180 @@
+local sys = require("sys")
+local app = require("app")
+local file = require("file")
+local webview = require("webview")
+
+local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
+local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
+
+local html = [[
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center}
+.badge{width:66px;min-height:26px;border-radius:13px;background:rgba(15,23,42,.92);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px 4px;box-sizing:border-box}
+.btn{width:66px;height:50px;border:0;border-radius:16px;color:#fff;font-size:12px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28)}
+.home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}
+</style>
+<script>
+window.__xxt_action = '';
+function pickAction(name){ window.__xxt_action = name; return name; }
+function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
+function setActionLabels(p20, claim){
+  var a=document.getElementById('btn20p');
+  var b=document.getElementById('btnclaim');
+  if(a){ a.textContent=p20; }
+  if(b){ b.textContent=claim; }
+}
+</script>
+</head>
+<body>
+<div id="dock">
+  <div class="badge" id="frontapp">APP ?</div>
+  <button class="btn home" onclick="pickAction('home')">HOME</button>
+  <button class="btn video" onclick="pickAction('video')">VIDEO</button>
+  <button class="btn p20" id="btn20p" onclick="pickAction('20p')">20P</button>
+  <button class="btn claim" id="btnclaim" onclick="pickAction('claim')">CLAIM</button>
+  <button class="btn clear" onclick="pickAction('clear')">CLEAR</button>
+</div>
+</body>
+</html>
+]]
+
+local function show_menu()
+  webview.show({
+    html = html,
+    x = 8,
+    y = 110,
+    width = 78,
+    height = 370,
+    alpha = 1.0,
+    corner_radius = 18,
+    opaque = false,
+    can_drag = true,
+    ignores_hit = false,
+  })
+end
+
+local function run_lua_file(path)
+  local code = file.reads(path)
+  if code and #tostring(code) > 0 then
+    local fn, err = load(code)
+    if fn then
+      return pcall(fn)
+    else
+      sys.toast('load lỗi')
+      return false, err
+    end
+  end
+  sys.toast('không thấy file')
+  return false
+end
+
+local function unlock_if_needed()
+  local device = require("device")
+  while device.is_screen_locked() do
+    device.unlock_screen()
+    sys.msleep(1000)
+  end
+end
+
+local function run_home()
+  app.run('com.apple.springboard')
+  sys.toast('HOME')
+end
+
+local function run_video()
+  return run_lua_file('/var/mobile/Media/1ferver/lua/scripts/video_test.lua')
+end
+
+local function current_front_mode()
+  local bid = tostring(app.front_bid() or '')
+  if bid == BID_TIKTOK then
+    return 'TikTok', '20P TT', 'CLAIM TT'
+  elseif bid == BID_TIKTOK_LITE then
+    return 'Lite', '20P LITE', 'CLAIM LITE'
+  end
+  return 'Other', '20P', 'CLAIM'
+end
+
+local function run_20p()
+  local bid = tostring(app.front_bid() or '')
+  unlock_if_needed()
+  if bid == BID_TIKTOK then
+    return run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_EventDD20p_tiktok.lua')
+  elseif bid == BID_TIKTOK_LITE then
+    return run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_EventDD20p_tiktok_lite.lua')
+  end
+  sys.toast('Không phải TikTok/Lite')
+  return false
+end
+
+local function run_claim()
+  local bid = tostring(app.front_bid() or '')
+  unlock_if_needed()
+  if bid == BID_TIKTOK then
+    app.open_url('aweme://webview?url=https%3A%2F%2Fwww.tiktok.com')
+    sys.toast('CLAIM TikTok')
+    return true
+  elseif bid == BID_TIKTOK_LITE then
+    app.open_url('tiktoklite://')
+    sys.toast('CLAIM Lite')
+    return true
+  end
+  sys.toast('Không phải TikTok/Lite')
+  return false
+end
+
+local function run_clear()
+  unlock_if_needed()
+  local ids = {
+    'com.apple.mobilesafari',
+    'com.apple.Preferences',
+    'com.apple.AppStore',
+    BID_TIKTOK,
+    BID_TIKTOK_LITE,
+    'ch.xxtou.XXTExplorer'
+  }
+  for i = 1, #ids do
+    pcall(app.quit, ids[i])
+    sys.msleep(250)
+  end
+  sys.toast('Đã đóng app')
+  return true
+end
+
+show_menu()
+local last_action = ''
+local last_front = ''
+while true do
+  local front_name, label_20p, label_claim = current_front_mode()
+  if front_name ~= last_front then
+    last_front = front_name
+    webview.eval(string.format("setFrontApp(%q);", front_name))
+    webview.eval(string.format("setActionLabels(%q, %q);", label_20p, label_claim))
+  end
+
+  local action = tostring(webview.eval('window.__xxt_action || "";') or '')
+  if action ~= '' and action ~= last_action then
+    last_action = action
+    webview.eval('window.__xxt_action = "";')
+    if action == 'home' then
+      run_home()
+    elseif action == 'video' then
+      run_video()
+    elseif action == '20p' then
+      run_20p()
+    elseif action == 'claim' then
+      run_claim()
+    elseif action == 'clear' then
+      run_clear()
+    end
+  elseif action == '' then
+    last_action = ''
+  end
+  sys.msleep(180)
+end
