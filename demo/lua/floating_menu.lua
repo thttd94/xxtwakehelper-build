@@ -42,7 +42,7 @@ function setCompactMode(compact){
   window.__xxt_compact = !!compact;
   if(document.body){ document.body.classList.toggle('compact', window.__xxt_compact); }
 }
-function toggleCompact(){ markAction(); setCompactMode(!window.__xxt_compact); return false; }
+function toggleCompact(){ markAction(); setCompactMode(!window.__xxt_compact); window.__xxt_action = window.__xxt_compact ? '__compact_on__' : '__compact_off__'; return false; }
 function setMenuLayout(mode){
   var isHome = mode === 'home';
   var isTikTok = mode === 'tiktok';
@@ -112,9 +112,20 @@ window.onload = lockUi;
 </html>
 ]]
 
-local function show_menu()
-  webview.show({ id = 1, html = side_html, x = 8, y = 96, width = 150, height = 700, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+local MENU_X = 8
+local MENU_Y = 96
+local MENU_W = 150
+local MENU_H_EXPANDED = 700
+local MENU_H_COMPACT = 90
+
+local function show_menu(height)
+  webview.show({ id = 1, html = side_html, x = MENU_X, y = MENU_Y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
+end
+
+local function resize_menu(compact)
+  local target_h = compact and MENU_H_COMPACT or MENU_H_EXPANDED
+  webview.show({ id = 1, html = side_html, x = MENU_X, y = MENU_Y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
 end
 
 local function set_top_status(text)
@@ -281,7 +292,7 @@ local function run_open_lite()
   return true
 end
 
-show_menu()
+show_menu(MENU_H_EXPANDED)
 local last_action = ''
 local last_mode_refresh = ''
 while true do
@@ -300,7 +311,11 @@ while true do
   if action ~= '' and action ~= last_action then
     last_action = action
     webview.eval('window.__xxt_action = "";', 1)
-    if action == 'home' then
+    if action == '__compact_on__' then
+      resize_menu(true)
+    elseif action == '__compact_off__' then
+      resize_menu(false)
+    elseif action == 'home' then
       run_home(ctx.front_name)
     elseif action == 'tiktok' then
       run_open_tiktok()
