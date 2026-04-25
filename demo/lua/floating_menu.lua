@@ -6,6 +6,7 @@ local webview = require("webview")
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
 local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
 local BID_HOME = "com.apple.springboard"
+local LUA_DIR = "/var/mobile/Media/1ferver/lib/"
 
 local side_html = [[
 <!doctype html>
@@ -266,32 +267,39 @@ local function run_home(front_name)
 end
 
 local function run_video(front_name)
+  local bid = tostring(app.front_bid() or '')
+  unlock_if_needed()
   set_active('video')
-  set_top_status((front_name or 'App') .. ': Video đang chạy')
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/video_test.lua')
+  if bid == BID_TIKTOK then
+    set_top_status('TikTok: Video đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventVideo180_tiktok.lua')
+    sys.msleep(700)
+    keep_state('video')
+    return ok
+  elseif bid == BID_TIKTOK_LITE then
+    set_top_status('TikTokLite: Video đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventVideo180_tiktok_lite.lua')
+    sys.msleep(700)
+    keep_state('video')
+    return ok
+  end
+  set_top_status((front_name or 'App') .. ': Không đúng app cho Video')
+  sys.toast('Không phải TikTok/Lite')
   sys.msleep(700)
   keep_state('video')
-  return ok
+  return false
 end
 
 local function run_claim(front_name)
   local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
   set_active('claim')
-  if bid == BID_TIKTOK then
-    set_top_status('TikTok: Claim đang chạy')
-    app.open_url('aweme://webview?url=https%3A%2F%2Fwww.tiktok.com')
-    sys.toast('CLAIM TikTok')
+  if bid == BID_TIKTOK or bid == BID_TIKTOK_LITE then
+    set_top_status((front_name or 'App') .. ': Claim đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Claimvideo48.lua')
     sys.msleep(700)
     keep_state('claim')
-    return true
-  elseif bid == BID_TIKTOK_LITE then
-    set_top_status('TikTokLite: Claim đang chạy')
-    app.open_url('tiktoklite://')
-    sys.toast('CLAIM Lite')
-    sys.msleep(700)
-    keep_state('claim')
-    return true
+    return ok
   end
   set_top_status('Other: Không đúng app')
   sys.toast('Không phải TikTok/Lite')
@@ -300,12 +308,92 @@ local function run_claim(front_name)
   return false
 end
 
-local function run_clear(front_name)
-  set_active('clear')
-  set_top_status((front_name or 'App') .. ': Mở App Manager đang chạy')
+local function run_20p(front_name)
+  local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
-  app.run('com.tigisoftware.ADManager')
-  sys.toast('Mở App Manager')
+  set_active('20p')
+  if bid == BID_TIKTOK then
+    set_top_status('TikTok: 20P đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventDD20p_tiktok.lua')
+    sys.msleep(700)
+    keep_state('20p')
+    return ok
+  elseif bid == BID_TIKTOK_LITE then
+    set_top_status('TikTokLite: 20P đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventDD20p_tiktok_lite.lua')
+    sys.msleep(700)
+    keep_state('20p')
+    return ok
+  end
+  set_top_status('Other: Không đúng app')
+  sys.toast('Không phải TikTok/Lite')
+  sys.msleep(700)
+  keep_state('20p')
+  return false
+end
+
+local function run_clear(front_name)
+  local bid = tostring(app.front_bid() or '')
+  unlock_if_needed()
+  set_active('clear')
+  if current_menu_mode == 'home' and current_home_submenu == 'tiktok' then
+    set_top_status('HOME: Xóa app TikTok')
+    pcall(app.uninstall, BID_TIKTOK)
+    sys.toast('Đã xóa TikTok')
+    sys.msleep(700)
+    keep_state('clear')
+    return true
+  elseif current_menu_mode == 'home' and current_home_submenu == 'lite' then
+    set_top_status('HOME: Xóa app TikTokLite')
+    pcall(app.uninstall, BID_TIKTOK_LITE)
+    sys.toast('Đã xóa TikTokLite')
+    sys.msleep(700)
+    keep_state('clear')
+    return true
+  elseif bid == BID_TIKTOK then
+    set_top_status('TikTok: Đóng app')
+    pcall(app.quit, BID_TIKTOK)
+    sys.toast('Đã đóng TikTok')
+    sys.msleep(700)
+    keep_state('clear')
+    return true
+  elseif bid == BID_TIKTOK_LITE then
+    set_top_status('TikTokLite: Đóng app')
+    pcall(app.quit, BID_TIKTOK_LITE)
+    sys.toast('Đã đóng TikTokLite')
+    sys.msleep(700)
+    keep_state('clear')
+    return true
+  end
+
+  set_top_status((front_name or 'App') .. ': Đóng nhóm app')
+  local ids = {
+    'com.apple.mobilesafari',
+    'com.apple.Preferences',
+    'com.apple.AppStore',
+    'com.ss.iphone.ugc.Ame',
+    'com.ss.iphone.ugc.tiktok.lite',
+    'com.apple.DocumentsApp',
+    'com.apple.camera',
+    'com.apple.mobiletimer',
+    'com.tigisoftware.Filza',
+    'com.tigisoftware.ADManager',
+    'com.apple.findmy',
+    'com.apple.Health',
+    'com.apple.MobileSMS',
+    'com.apple.mobilenotes',
+    'com.apple.mobilephone',
+    'com.apple.mobileslideshow',
+    'com.apple.shortcuts',
+    'com.apple.tips',
+    'com.opa334.TrollStore',
+    'ch.xxtou.XXTExplorer'
+  }
+  for i = 1, #ids do
+    pcall(app.quit, ids[i])
+    sys.msleep(300)
+  end
+  sys.toast('Đã đóng ứng dụng')
   sys.msleep(700)
   keep_state('clear')
   return true
@@ -329,6 +417,40 @@ local function run_open_lite()
   sys.msleep(700)
   keep_state('lite')
   return true
+end
+
+local function run_home_nurture()
+  unlock_if_needed()
+  if current_home_submenu == 'tiktok' then
+    set_top_status('HOME TikTok: Nuôi phôi đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok.lua')
+    sys.msleep(700)
+    return ok
+  elseif current_home_submenu == 'lite' then
+    set_top_status('HOME Lite: Nuôi phôi đang chạy')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok_lite.lua')
+    sys.msleep(700)
+    return ok
+  end
+  return false
+end
+
+local function run_home_install()
+  unlock_if_needed()
+  if current_home_submenu == 'tiktok' then
+    set_top_status('HOME TikTok: Tải app đang mở')
+    app.open_url('https://apps.apple.com/jp/app/tiktok-%E3%83%86%E3%82%A3%E3%83%83%E3%82%AF%E3%83%88%E3%83%83%E3%82%AF/id1235601864')
+    sys.toast('Mở link tải TikTok')
+    sys.msleep(700)
+    return true
+  elseif current_home_submenu == 'lite' then
+    set_top_status('HOME Lite: Tải app đang mở')
+    app.open_url('https://apps.apple.com/jp/app/tiktok-lite/id6447160980?l=en-US')
+    sys.toast('Mở link tải TikTokLite')
+    sys.msleep(700)
+    return true
+  end
+  return false
 end
 
 show_menu(MENU_H_EXPANDED)
@@ -389,28 +511,24 @@ while true do
       end
     elseif action == 'video' then
       if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        sys.toast('Nuoi Phoi')
+        run_home_nurture()
       else
         run_video(ctx.front_name)
       end
     elseif action == 'claim' then
       if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        sys.toast('Xoa App')
+        run_clear(ctx.front_name)
       else
         run_claim(ctx.front_name)
       end
     elseif action == 'clear' then
       if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        sys.toast('Tai App')
+        run_home_install()
       else
         run_clear(ctx.front_name)
       end
     elseif action == '20p' then
-      if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        sys.toast('20P')
-      else
-        sys.toast('20P')
-      end
+      run_20p(ctx.front_name)
     end
   elseif action == '' then
     last_action = ''
