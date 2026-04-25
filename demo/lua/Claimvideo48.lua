@@ -5,7 +5,6 @@ sys = require("sys")
 app = require("app")
 
 local IMG_DIR = "/var/mobile/Media/1ferver/lua/examples/"
-local COIN_IMG = IMG_DIR .. "coin.PNG"
 local CHECK_IMG_1 = IMG_DIR .. "checkvideo48_1.PNG"
 local CHECK_IMG_2 = IMG_DIR .. "checkvideo48_2.PNG"
 local CHECK_IMG_3 = IMG_DIR .. "checkvideo48_3.PNG"
@@ -50,8 +49,15 @@ local function findImage(img, sim, x1, y1, x2, y2)
  return false, -1, -1
 end
 
-local function findCoin()
- return findImage(COIN_IMG, 85, 40, 20, 240, 180)
+local function getEventEntryState()
+ local color = screen.get_color(130, 84)
+ if color == 0xffd452 then
+  return "ready", color
+ end
+ if color == 0xffffff then
+  return "not_ready", color
+ end
+ return "unknown", color
 end
 
 local function findClaimButton()
@@ -451,30 +457,34 @@ sys.msleep(20000)
 touch.tap(674, 1280)
 status("Buoc 3 OK: da bam vi tri 674,1280")
 
-status("Buoc 4: dang cho coin.PNG xuat hien")
-local coinWaitStart = os.time()
+status("Buoc 4: dang cho event o diem mau 130,84")
+local eventWaitStart = os.time()
 local tappedRetryAfter60 = false
-local lastCoinWaitLog = -1
+local lastEventWaitLog = -1
 while true do
  if checkTimeout() then return true end
- local okCoin, coinX, coinY = findCoin()
- if okCoin then
-  status("Buoc 4: da thay coin.PNG tai " .. tostring(coinX) .. "," .. tostring(coinY))
-  touch.tap(coinX + 10, coinY + 10)
-  status("Buoc 4 OK: da bam coin.PNG")
+ local state, color = getEventEntryState()
+ if state == "ready" then
+  status("Buoc 4: da co event tai 130,84 voi mau 0x" .. string.format("%06x", color))
+  touch.tap(130, 84)
+  status("Buoc 4 OK: da bam vi tri 130,84 de vao event")
   break
  end
 
- local waited = os.time() - coinWaitStart
+ local waited = os.time() - eventWaitStart
  local waitBucket = math.floor(waited / 5)
- if waitBucket ~= lastCoinWaitLog then
-  lastCoinWaitLog = waitBucket
-  status("Buoc 4: dang cho coin.PNG, da cho " .. tostring(waited) .. "s")
+ if waitBucket ~= lastEventWaitLog then
+  lastEventWaitLog = waitBucket
+  if state == "not_ready" then
+   status("Buoc 4: chua co event, diem 130,84 dang la 0x" .. string.format("%06x", color) .. ", da cho " .. tostring(waited) .. "s")
+  else
+   status("Buoc 4: mau tai 130,84 hien la 0x" .. string.format("%06x", color) .. ", da cho " .. tostring(waited) .. "s")
+  end
  end
 
  if not tappedRetryAfter60 and waited >= 60 then
   touch.tap(674, 1280)
-  status("Buoc 4: sau 60s chua thay coin.PNG, bam lai vi tri 674,1280")
+  status("Buoc 4: sau 60s chua co event, bam lai vi tri 674,1280")
   tappedRetryAfter60 = true
  end
 
