@@ -1852,10 +1852,10 @@ class XXTouchOnlyDemo(tk.Tk):
             client.write_file(remote_path, script_bytes)
             try:
                 select_resp = client._post_json('/select_script_file', {'filename': remote_path})
-                client._post_json('/set_click_volume_up_action', '1')
-                client._post_json('/set_click_volume_down_action', '1')
+                client._post_raw('/set_click_volume_up_action', '1')
+                client._post_raw('/set_click_volume_down_action', '1')
                 conf = client._post_json('/get_selected_script_file', {})
-                volume_conf = client._post_json('/get_volume_action_conf', {})
+                volume_conf = client._post_raw('/get_volume_action_conf', b'')
             except Exception as e:
                 raise XXTouchOpenAPIError(f'Không set được selected script/volume action: {e}')
             conf_data = conf.get('data', conf) if isinstance(conf, dict) else {}

@@ -48,6 +48,30 @@ class XXTouchOpenAPIClient:
         except Exception:
             return {'raw': raw}
 
+    def _post_raw(self, path: str, data=b'', content_type: str = 'application/x-www-form-urlencoded; charset=utf-8'):
+        if not self.base_url:
+            raise XXTouchOpenAPIError('Missing base_url')
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        req = urllib.request.Request(
+            self.base_url + path,
+            data=data,
+            headers={'Content-Type': content_type},
+            method='POST',
+        )
+        try:
+            with self._open_request(req) as resp:
+                raw = resp.read().decode('utf-8', 'replace')
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode('utf-8', 'replace')
+            raise XXTouchOpenAPIError(f'HTTP {e.code}: {detail}')
+        except Exception as e:
+            raise XXTouchOpenAPIError(str(e))
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {'raw': raw}
+
     def _post_lua(self, path: str, script: str, spawn_args=None):
         if not self.base_url:
             raise XXTouchOpenAPIError('Missing base_url')
