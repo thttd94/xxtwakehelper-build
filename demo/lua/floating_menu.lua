@@ -77,6 +77,7 @@ function autoHideLoop(){
   setInterval(function(){
     if(!window.__xxt_compact && (Date.now() - window.__xxt_last_action_at) >= 30000){
       setCompactMode(true);
+      window.__xxt_action = '__compact_on__';
     }
   }, 1000);
 }
