@@ -444,25 +444,13 @@ status("Bat dau Claimvideo48")
 pcall(app.quit, "com.ss.iphone.ugc.Ame")
 sys.msleep(1200)
 app.run("com.ss.iphone.ugc.Ame")
-sys.msleep(10000)
+status("Da mo TikTok, cho 20s roi bam vao vi tri co dinh")
+sys.msleep(20000)
+touch.tap(674, 1280)
+status("Da bam vi tri 674,1280")
 
-while true do
- if checkTimeout() then return true end
- local x, y = screen.find_color({
-  {676,1269,0xf6f6f6},
-  {674,1252,0xf6f6f6},
-  {657,1286,0xf6f6f6},
-  {671,1291,0xf6f6f6},
-  {692,1284,0xf6f6f6},
- },95,0,0,0,0)
- if x ~= -1 then
-  touch.tap(x, y)
-  status("Da bam diem mau vao giao dien event")
-  break
- end
- sys.msleep(1000)
-end
-
+local coinWaitStart = os.time()
+local tappedRetryAfter60 = false
 while true do
  if checkTimeout() then return true end
  local okCoin, coinX, coinY = findCoin()
@@ -471,6 +459,13 @@ while true do
   status("Da bam coin.PNG")
   break
  end
+
+ if not tappedRetryAfter60 and (os.time() - coinWaitStart) >= 60 then
+  touch.tap(674, 1280)
+  status("Sau 60s chua thay coin.PNG, bam lai vi tri 674,1280")
+  tappedRetryAfter60 = true
+ end
+
  sys.msleep(1000)
 end
 
