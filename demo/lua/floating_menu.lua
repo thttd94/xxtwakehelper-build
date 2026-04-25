@@ -2,11 +2,17 @@ local sys = require("sys")
 local app = require("app")
 local file = require("file")
 local webview = require("webview")
+local http = require("http")
+local json = require("json")
 
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
 local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
 local BID_HOME = "com.apple.springboard"
 local LUA_DIR = "/var/mobile/Media/1ferver/lib/"
+local CONTROL_DIR = "/var/mobile/Media/1ferver/floating_menu_control/"
+local REQUEST_FILE = CONTROL_DIR .. "request.json"
+local RESPONSE_FILE = CONTROL_DIR .. "response.json"
+local WORKER_FILE = CONTROL_DIR .. "worker.lua"
 
 local side_html = [[
 <!doctype html>
@@ -147,6 +153,9 @@ local current_front_app_text = 'APP ?'
 local current_menu_mode = 'other'
 local current_menu_compact = false
 local current_home_submenu = ''
+local pending_worker_action = nil
+local pending_worker_at = 0
+local worker_bootstrap_done = false
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
@@ -200,19 +209,97 @@ local function keep_state(active)
   end
 end
 
-local function run_lua_file(path)
-  local code = file.reads(path)
-  if code and #tostring(code) > 0 then
-    local fn, err = load(code)
-    if fn then
-      return pcall(fn)
-    else
-      sys.toast('load lỗi')
-      return false, err
+local function ensure_control_dir()
+  os.execute('mkdir -p ' .. CONTROL_DIR)
+end
+
+local function write_text(path, text)
+  local f = io.open(path, 'w')
+  if not f then return false end
+  f:write(text or '')
+  f:close()
+  return true
+end
+
+local function read_text(path)
+  local f = io.open(path, 'r')
+  if not f then return nil end
+  local s = f:read('*a')
+  f:close()
+  return s
+end
+
+local function remove_file(path)
+  os.remove(path)
+end
+
+local function ensure_worker_bootstrap()
+  if worker_bootstrap_done then return true end
+  ensure_control_dir()
+  local worker_code = [[
+local sys = require("sys")
+local http = require("http")
+local json = require("json")
+local REQUEST_FILE = "]] .. REQUEST_FILE .. [["
+local RESPONSE_FILE = "]] .. RESPONSE_FILE .. [["
+local OPENAPI_BASE = "http://127.0.0.1:46952"
+local function read_text(path)
+  local f = io.open(path, 'r')
+  if not f then return nil end
+  local s = f:read('*a')
+  f:close()
+  return s
+end
+local function write_text(path, text)
+  local f = io.open(path, 'w')
+  if not f then return false end
+  f:write(text or '')
+  f:close()
+  return true
+end
+local function remove_file(path)
+  os.remove(path)
+end
+local function post_json(path, payload)
+  local body = json.encode(payload or {})
+  local ok, res, code = pcall(function()
+    return http.request(OPENAPI_BASE .. path, body)
+  end)
+  if not ok then return false, tostring(res) end
+  if tonumber(code or 0) ~= 200 and type(code) ~= 'table' then return false, tostring(res) end
+  return true, tostring(res or '')
+end
+while true do
+  local raw = read_text(REQUEST_FILE)
+  if raw and raw ~= '' then
+    local okj, req = pcall(json.decode, raw)
+    remove_file(REQUEST_FILE)
+    if okj and req and req.path then
+      post_json('/recycle', {})
+      sys.msleep(2000)
+      local ok_run, res_run = post_json('/launch_script_file', { script_file = req.path, path = req.path, filename = req.path })
+      write_text(RESPONSE_FILE, json.encode({ ok = ok_run, action = req.action or '', path = req.path, response = tostring(res_run or '') }))
     end
   end
-  sys.toast('không thấy file')
-  return false
+  sys.msleep(250)
+end
+]]
+  write_text(WORKER_FILE, worker_code)
+  worker_bootstrap_done = true
+  return true
+end
+
+local function queue_worker_script(action_name, path)
+  ensure_worker_bootstrap()
+  local payload = json.encode({ action = action_name or '', path = path })
+  remove_file(RESPONSE_FILE)
+  write_text(REQUEST_FILE, payload)
+  local ok = pcall(sys.began_to_run, WORKER_FILE)
+  return ok and true or false
+end
+
+local function run_lua_file(action_name, path)
+  return queue_worker_script(action_name, path)
 end
 
 local function unlock_if_needed()
@@ -278,13 +365,13 @@ local function run_video(front_name)
   set_active('video')
   if bid == BID_TIKTOK then
     set_top_status('TikTok: Video đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Group3_EventVideo180_tiktok.lua')
+    local ok = run_lua_file('video', LUA_DIR .. 'Group3_EventVideo180_tiktok.lua')
     sys.msleep(700)
     keep_state('video')
     return ok
   elseif bid == BID_TIKTOK_LITE then
     set_top_status('TikTokLite: Video đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Group3_EventVideo180_tiktok_lite.lua')
+    local ok = run_lua_file('video', LUA_DIR .. 'Group3_EventVideo180_tiktok_lite.lua')
     sys.msleep(700)
     keep_state('video')
     return ok
@@ -302,7 +389,7 @@ local function run_claim(front_name)
   set_active('claim')
   if bid == BID_TIKTOK or bid == BID_TIKTOK_LITE then
     set_top_status((front_name or 'App') .. ': Claim đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Claimvideo48.lua')
+    local ok = run_lua_file('claim', LUA_DIR .. 'Claimvideo48.lua')
     sys.msleep(700)
     keep_state('claim')
     return ok
@@ -320,13 +407,13 @@ local function run_20p(front_name)
   set_active('20p')
   if bid == BID_TIKTOK then
     set_top_status('TikTok: 20P đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Group3_EventDD20p_tiktok.lua')
+    local ok = run_lua_file('20p', LUA_DIR .. 'Group3_EventDD20p_tiktok.lua')
     sys.msleep(700)
     keep_state('20p')
     return ok
   elseif bid == BID_TIKTOK_LITE then
     set_top_status('TikTokLite: 20P đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Group3_EventDD20p_tiktok_lite.lua')
+    local ok = run_lua_file('20p', LUA_DIR .. 'Group3_EventDD20p_tiktok_lite.lua')
     sys.msleep(700)
     keep_state('20p')
     return ok
@@ -430,13 +517,13 @@ local function run_home_nurture()
   set_active('video')
   if current_home_submenu == 'tiktok' then
     set_top_status('HOME TikTok: Nuôi phôi đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok.lua')
+    local ok = run_lua_file('video', LUA_DIR .. 'Group3_NuoiPhoi_tiktok.lua')
     sys.msleep(700)
     keep_state('video')
     return ok
   elseif current_home_submenu == 'lite' then
     set_top_status('HOME Lite: Nuôi phôi đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok_lite.lua')
+    local ok = run_lua_file('video', LUA_DIR .. 'Group3_NuoiPhoi_tiktok_lite.lua')
     sys.msleep(700)
     keep_state('video')
     return ok
@@ -516,6 +603,20 @@ local function execute_action(action, ctx)
   end
 end
 
+local function poll_worker_response()
+  local raw = read_text(RESPONSE_FILE)
+  if not raw or raw == '' then return end
+  local ok, data = pcall(json.decode, raw)
+  if not ok or type(data) ~= 'table' then return end
+  if data.ok then
+    set_top_status('Da chuyen script: ' .. tostring(data.action or ''))
+  else
+    set_top_status('Loi chuyen script: ' .. tostring(data.action or ''))
+    sys.toast('Worker loi chay script')
+  end
+  remove_file(RESPONSE_FILE)
+end
+
 show_menu(MENU_H_EXPANDED)
 local last_action = ''
 local last_mode_refresh = ''
@@ -537,6 +638,8 @@ while true do
       set_home_submenu(current_home_submenu)
     end
   end
+
+  poll_worker_response()
 
   local action = tostring(webview.eval('window.__xxt_action || "";', 1) or '')
   if action ~= '' and action ~= last_action then
