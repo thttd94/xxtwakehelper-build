@@ -1851,10 +1851,17 @@ class XXTouchOnlyDemo(tk.Tk):
             client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=8)
             client.write_file(remote_path, script_bytes)
             try:
-                client._post_json('/select_startup_script_file', {'filename': safe_name})
+                select_resp = client._post_json('/select_startup_script_file', {'filename': safe_name})
                 client._post_json('/set_startup_run_on', {})
+                conf = client._post_json('/get_startup_conf', {})
             except Exception as e:
                 raise XXTouchOpenAPIError(f'Không set được startup conf: {e}')
+            conf_data = conf.get('data', conf) if isinstance(conf, dict) else {}
+            active_script = str(conf_data.get('startup_script') or '').strip()
+            startup_run = bool(conf_data.get('startup_run'))
+            if active_script != safe_name or not startup_run:
+                details = select_resp.get('message') if isinstance(select_resp, dict) else select_resp
+                raise XXTouchOpenAPIError(f'Set startup chưa ăn, current={active_script or "<trống>"}, run={startup_run}, select={details}')
             row['startup_script'] = safe_name
             row['startup_run'] = True
             row['network'] = 'Online'
