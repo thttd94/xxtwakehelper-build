@@ -5,104 +5,133 @@ local webview = require("webview")
 
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
 local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
+local BID_HOME = "com.apple.springboard"
 
-local html = [[
+local side_html = [[
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,user-scalable=no">
 <style>
-html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
-#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:flex-start;padding:12px 0;box-sizing:border-box}
-.badge{width:132px;min-height:40px;border-radius:18px;background:rgba(15,23,42,.92);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px 8px;box-sizing:border-box}
-.state{background:rgba(30,41,59,.96);color:#93c5fd}
-.btn{width:132px;height:78px;border:0;border-radius:24px;color:#fff;font-size:22px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);opacity:.96;transition:all .12s ease}
-.btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 3px rgba(255,255,255,.22),0 10px 24px rgba(0,0,0,.35)}
-.home{background:#2563eb}.tiktok{background:#111827}.lite{background:#16a34a}.close{background:#7c3aed}.lock{background:#dc2626}.sub{background:#ea580c;font-size:20px;height:74px}.back{background:#475569}
+html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:flex-start;padding:12px 8px}
+.badge{width:132px;min-height:56px;border-radius:24px;background:rgba(15,23,42,.92);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 10px;border:0;box-shadow:0 12px 28px rgba(0,0,0,.28)}
+.btn{width:132px;height:92px;border:0;border-radius:26px;color:#fff;font-size:24px;font-weight:700;box-shadow:0 12px 28px rgba(0,0,0,.28);opacity:.96;transition:all .12s ease;outline:none}
+.btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
+.home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}
+.compact .action-btn{display:none}
+.compact #dock{justify-content:flex-start}
+.hidden{display:none!important}
 </style>
 <script>
 window.__xxt_action = '';
-window.__xxt_mode = 'home';
+window.__xxt_compact = false;
 function pickAction(name){ window.__xxt_action = name; return false; }
+function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
-function setState(name){ var el=document.getElementById('runstate'); if(el){ el.textContent=name; } }
-function setMode(mode){
-  window.__xxt_mode = mode || 'home';
-  var homeRows = document.querySelectorAll('.home-row');
-  var ttRows = document.querySelectorAll('.tt-row');
-  var liteRows = document.querySelectorAll('.lite-row');
-  for(var i=0;i<homeRows.length;i++){ homeRows[i].style.display = (window.__xxt_mode === 'home') ? 'block' : 'none'; }
-  for(var j=0;j<ttRows.length;j++){ ttRows[j].style.display = (window.__xxt_mode === 'tiktok') ? 'block' : 'none'; }
-  for(var k=0;k<liteRows.length;k++){ liteRows[k].style.display = (window.__xxt_mode === 'lite') ? 'block' : 'none'; }
+function setActionLabels(video, claim){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } }
+function setAppButtons(tt, lite){ var a=document.getElementById('btn_tiktok'); var b=document.getElementById('btn_lite'); if(a){ a.textContent=tt; } if(b){ b.textContent=lite; } }
+function setClearLabel(text){ var el=document.getElementById('btn_clear'); if(el){ el.textContent=text; } }
+function setActive(name){ var ids=['home','tiktok','lite','video','claim','clear']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } var target=document.getElementById('btn_'+name); if(target){ target.classList.add('active'); } }
+function clearActive(){ var ids=['home','tiktok','lite','video','claim','clear']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } }
+function setCompactMode(compact){
+  window.__xxt_compact = !!compact;
+  if(document.body){ document.body.classList.toggle('compact', window.__xxt_compact); }
 }
-function setActive(name){
-  var nodes = document.querySelectorAll('.btn');
-  for(var i=0;i<nodes.length;i++){ nodes[i].classList.remove('active'); }
-  var target=document.getElementById('btn_'+name);
-  if(target){ target.classList.add('active'); }
+function toggleCompact(){ setCompactMode(!window.__xxt_compact); return false; }
+function setMenuLayout(mode){
+  var isHome = mode === 'home';
+  var isTikTok = mode === 'tiktok';
+  var isLite = mode === 'lite';
+  var showHomeButtons = isHome;
+  var showAppButtons = isHome;
+  var showActionButtons = isTikTok || isLite;
+
+  var btnHome = document.getElementById('btn_home');
+  var btnTikTok = document.getElementById('btn_tiktok');
+  var btnLite = document.getElementById('btn_lite');
+  var btnVideo = document.getElementById('btn_video');
+  var btnClaim = document.getElementById('btn_claim');
+  var btnClear = document.getElementById('btn_clear');
+
+  if(btnHome){ btnHome.classList.toggle('hidden', !showHomeButtons); }
+  if(btnTikTok){ btnTikTok.classList.toggle('hidden', !showAppButtons); }
+  if(btnLite){ btnLite.classList.toggle('hidden', !showAppButtons); }
+  if(btnVideo){ btnVideo.classList.toggle('hidden', !showActionButtons); }
+  if(btnClaim){ btnClaim.classList.toggle('hidden', !showActionButtons); }
+  if(btnClear){ btnClear.classList.remove('hidden'); }
 }
-function clearActive(){
-  var nodes = document.querySelectorAll('.btn');
-  for(var i=0;i<nodes.length;i++){ nodes[i].classList.remove('active'); }
-}
-window.onload = function(){ setMode('home'); };
+window.onload = function(){ lockUi(); setCompactMode(false); setMenuLayout('other'); };
 </script>
 </head>
 <body>
 <div id="dock">
-  <div class="badge" id="frontapp">HOME</div>
-  <div class="badge state" id="runstate">IDLE</div>
-
-  <div class="home-row"><button class="btn home" id="btn_home" onclick="return pickAction('home')">HOME</button></div>
-  <div class="home-row"><button class="btn tiktok" id="btn_tiktok" onclick="setMode(window.__xxt_mode==='tiktok'?'home':'tiktok');return false;">TIKTOK</button></div>
-  <div class="home-row"><button class="btn lite" id="btn_lite" onclick="setMode(window.__xxt_mode==='lite'?'home':'lite');return false;">TIKTOK LITE</button></div>
-  <div class="home-row"><button class="btn close" id="btn_clear" onclick="return pickAction('clear')">ĐÓNG ỨNG DỤNG</button></div>
-  <div class="home-row"><button class="btn lock" id="btn_lock" onclick="return pickAction('lock')">LOCK</button></div>
-
-  <div class="tt-row" style="display:none"><button class="btn back" id="btn_tt_back" onclick="setMode('home');return false;">← TIKTOK</button></div>
-  <div class="tt-row" style="display:none"><button class="btn sub" id="btn_tt_nurture" onclick="return pickAction('tt_nurture')">NUÔI PHÔI</button></div>
-  <div class="tt-row" style="display:none"><button class="btn sub" id="btn_tt_ev180" onclick="return pickAction('tt_ev180')">EVENT 180P</button></div>
-  <div class="tt-row" style="display:none"><button class="btn sub" id="btn_tt_dd20" onclick="return pickAction('tt_dd20')">EVENT DD 20P</button></div>
-
-  <div class="lite-row" style="display:none"><button class="btn back" id="btn_lite_back" onclick="setMode('home');return false;">← TIKTOK LITE</button></div>
-  <div class="lite-row" style="display:none"><button class="btn sub" id="btn_lite_nurture" onclick="return pickAction('lite_nurture')">NUÔI PHÔI</button></div>
-  <div class="lite-row" style="display:none"><button class="btn sub" id="btn_lite_ev180" onclick="return pickAction('lite_ev180')">EVENT 180P</button></div>
-  <div class="lite-row" style="display:none"><button class="btn sub" id="btn_lite_dd20" onclick="return pickAction('lite_dd20')">EVENT DD 20P</button></div>
+  <button class="badge" id="frontapp" onclick="return toggleCompact()">APP ?</button>
+  <button class="btn home action-btn hidden" id="btn_home" onclick="return pickAction('home')">HOME</button>
+  <button class="btn app action-btn hidden" id="btn_tiktok" onclick="return pickAction('tiktok')">TIKTOK</button>
+  <button class="btn app action-btn hidden" id="btn_lite" onclick="return pickAction('lite')">LITE</button>
+  <button class="btn video action-btn hidden" id="btn_video" onclick="return pickAction('video')">VIDEO</button>
+  <button class="btn claim action-btn hidden" id="btn_claim" onclick="return pickAction('claim')">CLAIM</button>
+  <button class="btn clear action-btn" id="btn_clear" onclick="return pickAction('clear')">CLEAR</button>
 </div>
 </body>
 </html>
 ]]
 
+local top_html = [[
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,user-scalable=no">
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.97);color:#111827;border-radius:14px;font-size:18px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
+</style>
+<script>
+function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
+function setTopStatus(text){ var el=document.getElementById('status'); if(el){ el.textContent=text; } }
+window.onload = lockUi;
+</script>
+</head>
+<body>
+<div id="status">TikTok: Video đang chạy</div>
+</body>
+</html>
+]]
+
 local function show_menu()
-  webview.show({
-    html = html,
-    x = 8,
-    y = 40,
-    width = 154,
-    height = 820,
-    alpha = 1.0,
-    corner_radius = 24,
-    opaque = false,
-    can_drag = true,
-    ignores_hit = false,
-  })
+  webview.show({ id = 1, html = side_html, x = 8, y = 96, width = 150, height = 700, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
-local function set_state(label, active)
-  webview.eval(string.format("setState(%q);", label or 'IDLE'))
+local function set_top_status(text)
+  webview.eval(string.format("setTopStatus(%q);", text or 'TikTok: Video đang chạy'), 2)
+end
+
+local function set_active(active)
   if active and active ~= '' then
-    webview.eval(string.format("setActive(%q);", active))
+    webview.eval(string.format("setActive(%q);", active), 1)
   else
-    webview.eval("clearActive();")
+    webview.eval("clearActive();", 1)
   end
 end
 
-local function finish_state(go_home)
-  if go_home ~= false then
-    webview.eval("setMode('home');")
+local function set_front_app(text)
+  webview.eval(string.format("setFrontApp(%q);", text or 'APP ?'), 1)
+end
+
+local function set_menu_layout(mode)
+  webview.eval(string.format("setMenuLayout(%q);", mode or 'other'), 1)
+end
+
+local function keep_state(active)
+  if active and active ~= '' then
+    set_active(active)
   end
-  set_state('IDLE', '')
 end
 
 local function run_lua_file(path)
@@ -128,143 +157,152 @@ local function unlock_if_needed()
   end
 end
 
-local function current_front_name()
+local function get_front_context()
   local bid = tostring(app.front_bid() or '')
   if bid == BID_TIKTOK then
-    return 'TikTok'
+    return {
+      front_name = 'TikTok',
+      menu_mode = 'tiktok',
+      video_label = 'VIDEO',
+      claim_label = 'CLAIM',
+      tiktok_label = 'TIKTOK',
+      lite_label = 'LITE',
+    }
   elseif bid == BID_TIKTOK_LITE then
-    return 'TikTok Lite'
-  elseif bid == 'com.apple.springboard' then
-    return 'Home'
+    return {
+      front_name = 'TikTokLite',
+      menu_mode = 'lite',
+      video_label = 'VIDEO',
+      claim_label = 'CLAIM',
+      tiktok_label = 'TIKTOK',
+      lite_label = 'LITE',
+    }
+  elseif bid == BID_HOME then
+    return {
+      front_name = 'HOME',
+      menu_mode = 'home',
+      video_label = 'VIDEO',
+      claim_label = 'CLAIM',
+      tiktok_label = 'TIKTOK',
+      lite_label = 'LITE',
+    }
   end
-  return 'Home'
+  return {
+    front_name = 'Other',
+    menu_mode = 'other',
+    video_label = 'VIDEO',
+    claim_label = 'CLAIM',
+    tiktok_label = 'TIKTOK',
+    lite_label = 'LITE',
+  }
 end
 
-local function update_front_badge()
-  webview.eval(string.format("setFrontApp(%q);", current_front_name()))
-end
-
-local function run_home()
-  set_state('RUN HOME', 'home')
-  unlock_if_needed()
-  app.run('com.apple.springboard')
+local function run_home(front_name)
+  set_active('home')
+  set_top_status((front_name or 'App') .. ': Home đang chạy')
+  app.run(BID_HOME)
   sys.toast('HOME')
   sys.msleep(500)
-  update_front_badge()
-  finish_state(true)
+  keep_state('home')
 end
 
-local function run_lock()
-  set_state('RUN LOCK', 'lock')
-  local device = require("device")
-  device.lock_screen()
-  sys.toast('LOCK')
-  sys.msleep(500)
-  finish_state(false)
+local function run_video(front_name)
+  set_active('video')
+  set_top_status((front_name or 'App') .. ': Video đang chạy')
+  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/video_test.lua')
+  sys.msleep(700)
+  keep_state('video')
+  return ok
 end
 
-local function run_clear()
-  set_state('RUN CLEAR', 'clear')
+local function run_claim(front_name)
+  local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
-  local ids = {
-    'com.apple.mobilesafari',
-    'com.apple.Preferences',
-    'com.apple.AppStore',
-    BID_TIKTOK,
-    BID_TIKTOK_LITE,
-    'ch.xxtou.XXTExplorer'
-  }
-  for i = 1, #ids do
-    pcall(app.quit, ids[i])
-    sys.msleep(250)
+  set_active('claim')
+  if bid == BID_TIKTOK then
+    set_top_status('TikTok: Claim đang chạy')
+    app.open_url('aweme://webview?url=https%3A%2F%2Fwww.tiktok.com')
+    sys.toast('CLAIM TikTok')
+    sys.msleep(700)
+    keep_state('claim')
+    return true
+  elseif bid == BID_TIKTOK_LITE then
+    set_top_status('TikTokLite: Claim đang chạy')
+    app.open_url('tiktoklite://')
+    sys.toast('CLAIM Lite')
+    sys.msleep(700)
+    keep_state('claim')
+    return true
   end
-  sys.toast('Đã đóng ứng dụng')
+  set_top_status('Other: Không đúng app')
+  sys.toast('Không phải TikTok/Lite')
   sys.msleep(700)
-  finish_state(false)
+  keep_state('claim')
+  return false
 end
 
-local function run_tiktok_nurture()
-  set_state('TT NUÔI PHÔI', 'tt_nurture')
+local function run_clear(front_name)
+  set_active('clear')
+  set_top_status((front_name or 'App') .. ': Mở App Manager đang chạy')
   unlock_if_needed()
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_NuoiPhoi_tiktok.lua')
+  app.run('com.tigisoftware.ADManager')
+  sys.toast('Mở App Manager')
   sys.msleep(700)
-  finish_state(true)
-  return ok
+  keep_state('clear')
+  return true
 end
 
-local function run_tiktok_ev180()
-  set_state('TT EVENT 180P', 'tt_ev180')
-  unlock_if_needed()
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_EventVideo180_tiktok.lua')
+local function run_open_tiktok()
+  set_active('tiktok')
+  set_top_status('HOME: mở TikTok')
+  app.run(BID_TIKTOK)
+  sys.toast('Mở TikTok')
   sys.msleep(700)
-  finish_state(true)
-  return ok
+  keep_state('tiktok')
+  return true
 end
 
-local function run_tiktok_dd20()
-  set_state('TT EVENT DD 20P', 'tt_dd20')
-  unlock_if_needed()
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_EventDD20p_tiktok.lua')
+local function run_open_lite()
+  set_active('lite')
+  set_top_status('HOME: mở TikTokLite')
+  app.run(BID_TIKTOK_LITE)
+  sys.toast('Mở TikTokLite')
   sys.msleep(700)
-  finish_state(true)
-  return ok
-end
-
-local function run_lite_nurture()
-  set_state('LITE NUÔI PHÔI', 'lite_nurture')
-  unlock_if_needed()
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_NuoiPhoi_tiktok_lite.lua')
-  sys.msleep(700)
-  finish_state(true)
-  return ok
-end
-
-local function run_lite_ev180()
-  set_state('LITE EVENT 180P', 'lite_ev180')
-  unlock_if_needed()
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_EventVideo180_tiktok_lite.lua')
-  sys.msleep(700)
-  finish_state(true)
-  return ok
-end
-
-local function run_lite_dd20()
-  set_state('LITE EVENT DD 20P', 'lite_dd20')
-  unlock_if_needed()
-  local ok = run_lua_file('/var/mobile/Media/1ferver/lua/scripts/Group3_EventDD20p_tiktok_lite.lua')
-  sys.msleep(700)
-  finish_state(true)
-  return ok
+  keep_state('lite')
+  return true
 end
 
 show_menu()
-update_front_badge()
-set_state('IDLE', '')
 local last_action = ''
+local last_mode_refresh = ''
 while true do
-  update_front_badge()
-  local action = tostring(webview.eval('window.__xxt_action || "";') or '')
+  local ctx = get_front_context()
+  local mode_key = ctx.front_name .. '|' .. ctx.menu_mode .. '|' .. ctx.video_label .. '|' .. ctx.claim_label
+  if mode_key ~= last_mode_refresh then
+    last_mode_refresh = mode_key
+    set_front_app(ctx.front_name)
+    webview.eval(string.format("setActionLabels(%q, %q);", ctx.video_label, ctx.claim_label), 1)
+    webview.eval(string.format("setAppButtons(%q, %q);", ctx.tiktok_label, ctx.lite_label), 1)
+    webview.eval("setClearLabel('CLEAR');", 1)
+    set_menu_layout(ctx.menu_mode)
+  end
+
+  local action = tostring(webview.eval('window.__xxt_action || "";', 1) or '')
   if action ~= '' and action ~= last_action then
     last_action = action
-    webview.eval('window.__xxt_action = "";')
+    webview.eval('window.__xxt_action = "";', 1)
     if action == 'home' then
-      run_home()
+      run_home(ctx.front_name)
+    elseif action == 'tiktok' then
+      run_open_tiktok()
+    elseif action == 'lite' then
+      run_open_lite()
+    elseif action == 'video' then
+      run_video(ctx.front_name)
+    elseif action == 'claim' then
+      run_claim(ctx.front_name)
     elseif action == 'clear' then
-      run_clear()
-    elseif action == 'lock' then
-      run_lock()
-    elseif action == 'tt_nurture' then
-      run_tiktok_nurture()
-    elseif action == 'tt_ev180' then
-      run_tiktok_ev180()
-    elseif action == 'tt_dd20' then
-      run_tiktok_dd20()
-    elseif action == 'lite_nurture' then
-      run_lite_nurture()
-    elseif action == 'lite_ev180' then
-      run_lite_ev180()
-    elseif action == 'lite_dd20' then
-      run_lite_dd20()
+      run_clear(ctx.front_name)
     end
   elseif action == '' then
     last_action = ''
