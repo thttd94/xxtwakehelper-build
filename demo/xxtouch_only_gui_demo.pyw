@@ -9,7 +9,7 @@ from pathlib import Path
 from tkinter import ttk, messagebox, filedialog
 
 LUA_DIR = Path(__file__).with_name('lua')
-FLOATING_MENU_PATH = Path(__file__).resolve().parents[1] / 'floating_menu.lua'
+FLOATING_MENU_PATH = LUA_DIR / 'floating_menu.lua'
 
 from xxtouch_openapi_client import XXTouchOpenAPIClient, XXTouchOpenAPIError
 
