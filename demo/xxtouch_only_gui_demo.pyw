@@ -244,6 +244,7 @@ class XXTouchOnlyDemo(tk.Tk):
             ttk.Button(primary_row, text=text, command=cmd).pack(side='left', padx=(0, 6))
 
         ttk.Button(primary_row, text='TXT', command=lambda r=router: self._open_txt_lines_popup(r)).pack(side='left', padx=(8, 6))
+        ttk.Button(primary_row, text='MORE', command=lambda r=router: self._open_more_popup(r)).pack(side='left', padx=(0, 6))
 
         default_remote = 'all'
         rows = router.get('rows', [])
@@ -1257,6 +1258,92 @@ class XXTouchOnlyDemo(tk.Tk):
         idx = self.router_tabs.index(self.router_tabs.select())
         return self.routers[idx]
 
+    def _open_more_popup(self, router):
+        win = tk.Toplevel(self)
+        win.title(f'More - {router.get("name", "")}')
+        win.geometry('340x180')
+        win.resizable(False, False)
+        win.configure(bg='#111827')
+        try:
+            win.transient(self)
+            win.grab_set()
+        except Exception:
+            pass
+
+        body = ttk.Frame(win, style='Card.TFrame', padding=16)
+        body.pack(fill='both', expand=True)
+        ttk.Label(body, text='Chức năng ít dùng', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
+        ttk.Label(body, text='Các nút phụ nằm riêng để giao diện chính gọn hơn', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
+        ttk.Button(body, text='Startup Script', command=lambda: (win.destroy(), self._open_startup_script_popup(router))).pack(anchor='w')
+        ttk.Button(body, text='Đóng', command=win.destroy).pack(side='right', pady=(18, 0))
+
+    def _open_startup_script_popup(self, router):
+        rows = list(self._selected_rows(router))
+        if not rows:
+            self._append_router_log(router, 'STARTUP SCRIPT: không có máy nào được chọn')
+            return
+
+        win = tk.Toplevel(self)
+        win.title(f'Startup Script - {router.get("name", "")}')
+        win.geometry('620x230')
+        win.resizable(False, False)
+        win.configure(bg='#111827')
+        try:
+            win.transient(self)
+            win.grab_set()
+        except Exception:
+            pass
+
+        body = ttk.Frame(win, style='Card.TFrame', padding=16)
+        body.pack(fill='both', expand=True)
+        ttk.Label(body, text='Cài script khởi động cho máy đã chọn', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
+        ttk.Label(body, text='Chọn file lua local, rồi nhập tên script startup sẽ chạy trên client', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
+
+        file_row = ttk.Frame(body, style='Card.TFrame')
+        file_row.pack(fill='x', pady=(0, 12))
+        ttk.Label(file_row, text='File lua', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        file_var = tk.StringVar()
+        ttk.Entry(file_row, textvariable=file_var, width=56).pack(side='left', fill='x', expand=True)
+
+        def choose_file():
+            path = filedialog.askopenfilename(title='Chọn file lua startup', filetypes=[('Lua files', '*.lua'), ('All files', '*.*')])
+            if path:
+                file_var.set(path)
+                if not script_name_var.get().strip():
+                    script_name_var.set(Path(path).name)
+
+        ttk.Button(file_row, text='Chọn file', command=choose_file).pack(side='left', padx=(8, 0))
+
+        name_row = ttk.Frame(body, style='Card.TFrame')
+        name_row.pack(fill='x', pady=(0, 8))
+        ttk.Label(name_row, text='Tên script startup', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        script_name_var = tk.StringVar()
+        ttk.Entry(name_row, textvariable=script_name_var, width=32).pack(side='left')
+
+        ttk.Label(body, text=f'Áp dụng theo bộ máy đang chọn: {len(rows)} máy', style='Sub.TLabel').pack(anchor='w', pady=(4, 0))
+
+        def do_apply():
+            file_path = file_var.get().strip()
+            script_name = script_name_var.get().strip()
+            if not file_path:
+                messagebox.showwarning('Thiếu file', 'Hãy chọn file lua')
+                return
+            if not script_name:
+                messagebox.showwarning('Thiếu tên script', 'Hãy nhập tên script startup')
+                return
+            try:
+                script_bytes = Path(file_path).read_bytes()
+            except Exception as e:
+                messagebox.showerror('Không đọc được file', str(e))
+                return
+            win.destroy()
+            self._run_set_startup_script_for_router(router, script_name, script_bytes)
+
+        actions = ttk.Frame(body, style='Card.TFrame')
+        actions.pack(fill='x', pady=(18, 0))
+        ttk.Button(actions, text='Cài Startup Script', command=do_apply).pack(side='right')
+        ttk.Button(actions, text='Hủy', command=win.destroy).pack(side='right', padx=(0, 8))
+
     def _open_remote_panel(self, router):
         machines = router.get('rows', [])
         if not machines:
@@ -1742,6 +1829,49 @@ class XXTouchOnlyDemo(tk.Tk):
             return row
 
         self._run_parallel_rows(router, rows, task, 'UI', per_success=lambda row: f'[{row.get("machine", "?")}] UI OK')
+
+    def _run_set_startup_script_for_router(self, router, script_name, script_bytes):
+        rows = self._selected_rows(router)
+        if not rows:
+            self._append_router_log(router, 'STARTUP SCRIPT: không có máy nào được chọn')
+            return
+        safe_name = Path(script_name).name.strip()
+        if not safe_name:
+            self._append_router_log(router, 'STARTUP SCRIPT: tên script không hợp lệ')
+            return
+        if not safe_name.lower().endswith('.lua'):
+            safe_name += '.lua'
+        remote_path = f'/var/mobile/Media/1ferver/lua/scripts/{safe_name}'
+        startup_payload = {
+            'startup_script': safe_name,
+            'script': safe_name,
+            'path': remote_path,
+            'startup_path': remote_path,
+            'enable': True,
+            'enabled': True,
+        }
+        self._append_router_log(router, f'STARTUP SCRIPT: bắt đầu cài {safe_name} cho {len(rows)} máy')
+
+        def task(row):
+            ip = str(row.get('ip') or '').strip()
+            if not ip:
+                raise XXTouchOpenAPIError('Thiếu IP')
+            client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=8)
+            client.write_file(remote_path, script_bytes)
+            last_error = None
+            for endpoint in ('/set_startup_conf', '/startup_conf', '/save_startup_conf'):
+                try:
+                    client._post_json(endpoint, startup_payload)
+                    row['startup_script'] = safe_name
+                    row['network'] = 'Online'
+                    row['xxtouch'] = 'Connected'
+                    row['updated'] = now_text()
+                    return row
+                except Exception as e:
+                    last_error = e
+            raise XXTouchOpenAPIError(f'Không set được startup conf: {last_error}')
+
+        self._run_parallel_rows(router, rows, task, 'STARTUP SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] STARTUP SCRIPT OK ({safe_name})')
 
     def _run_spawn_command_for_router(self, router, command, action_name, stop_first=True, read_timeout=6):
         rows = self._selected_rows(router)
