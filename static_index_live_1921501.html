@@ -232,7 +232,6 @@
             <button class="btn apply" onclick="admRunSimpleAction('home')">HOME</button>
             <button class="btn apply" onclick="admRunSimpleAction('lock_home')">LOCK HOME</button>
             <button class="btn apply" onclick="admRunSimpleAction('clear_app')">CLEAR APP</button>
-            <button class="btn apply" onclick="admRunSimpleAction('open_app_manager')">APP MANAGER</button>
             <button class="btn apply" onclick="admChooseFiles()">CHỌN FILE</button>
             <div style="display:flex; align-items:center; gap:4px; border:1px solid #374151; border-radius:8px; padding:0 8px; min-width:150px; background:#111827;">
               <input id="admSelectedFilesCount" style="max-width:110px; border:none; background:transparent;" readonly placeholder="0 file">
@@ -244,12 +243,13 @@
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
             <div style="border:2px solid #d1d5db; border-radius:10px; padding:18px; min-height:240px; background:#fff;">
-              <div style="display:grid; gap:14px; max-width:220px;">
+              <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; width:100%; max-width:760px;">
+                <button class="btn apply" onclick="admRunSimpleAction('open_app_manager')">APP MANAGER</button>
                 <button class="btn apply" onclick="admRunSimpleAction('remove_tiktok_lite')">Gỡ app TIKTOK LITE</button>
                 <button class="btn apply" onclick="admRunSimpleAction('remove_tiktok')">Gỡ app TIKTOK</button>
-                <button class="btn apply" onclick="admRunSimpleAction('install_tiktok')">Cài app TIKTOK</button>
-                <button class="btn apply" onclick="admRunSimpleAction('install_tiktok_lite')">Cài app TIKTOK LITE</button>
                 <button class="btn apply" onclick="admRunSimpleAction('quit_apps')">Đóng Ứng Dụng</button>
+                <button class="btn apply" onclick="admRunSimpleAction('install_tiktok_lite')">Cài app TIKTOK LITE</button>
+                <button class="btn apply" onclick="admRunSimpleAction('install_tiktok')">Cài app TIKTOK</button>
               </div>
             </div>
             <div style="border:2px solid #d1d5db; border-radius:10px; padding:18px; min-height:240px; background:#fff;">
