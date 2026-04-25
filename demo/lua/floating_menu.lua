@@ -34,12 +34,12 @@ function pickAction(name){ markAction(); window.__xxt_action = name; return fals
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
 window.__xxt_home_submenu = '';
-function setActionLabels(video, claim){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } }
+function setActionLabels(video, claim, p20){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); var c=document.getElementById('btn_20p'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } if(c){ c.textContent=p20 || '20P'; } }
 function setAppButtons(tt, lite){ var a=document.getElementById('btn_tiktok'); var b=document.getElementById('btn_lite'); if(a){ a.textContent=tt; } if(b){ b.textContent=lite; } }
 function setClearLabel(text){ var el=document.getElementById('btn_clear'); if(el){ el.textContent=text; } }
 function setHomeSubmenuLabels(nurtureLabel, clearLabel, installLabel){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); var c=document.getElementById('btn_clear'); if(a){ a.textContent=nurtureLabel; } if(b){ b.textContent=clearLabel; } if(c){ c.textContent=installLabel; } }
-function setActive(name){ var ids=['home','tiktok','lite','video','claim','clear']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } var target=document.getElementById('btn_'+name); if(target){ target.classList.add('active'); } }
-function clearActive(){ var ids=['home','tiktok','lite','video','claim','clear']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } }
+function setActive(name){ var ids=['home','tiktok','lite','video','claim','clear','20p']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } var target=document.getElementById('btn_'+name); if(target){ target.classList.add('active'); } }
+function clearActive(){ var ids=['home','tiktok','lite','video','claim','clear','20p']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } }
 function setCompactMode(compact){
   window.__xxt_compact = !!compact;
   if(document.body){ document.body.classList.toggle('compact', window.__xxt_compact); }
@@ -61,12 +61,14 @@ function setMenuLayout(mode){
   var btnVideo = document.getElementById('btn_video');
   var btnClaim = document.getElementById('btn_claim');
   var btnClear = document.getElementById('btn_clear');
+  var btn20p = document.getElementById('btn_20p');
 
   if(btnHome){ btnHome.classList.toggle('hidden', !showHomeButtons); }
   if(btnTikTok){ btnTikTok.classList.toggle('hidden', !showTikTokMain); }
   if(btnLite){ btnLite.classList.toggle('hidden', !showLiteMain); }
   if(btnVideo){ btnVideo.classList.toggle('hidden', !showActionButtons); }
   if(btnClaim){ btnClaim.classList.toggle('hidden', !showActionButtons); }
+  if(btn20p){ btn20p.classList.toggle('hidden', !(isTikTok || isLite)); }
   if(btnClear){ btnClear.classList.toggle('hidden', false); }
 }
 function setHomeSubmenu(name){
@@ -92,6 +94,7 @@ window.onload = function(){ lockUi(); setCompactMode(false); setMenuLayout('othe
   <button class="btn app action-btn hidden" id="btn_lite" onclick="return pickAction('lite')">LITE</button>
   <button class="btn video action-btn hidden" id="btn_video" onclick="return pickAction('video')">VIDEO</button>
   <button class="btn claim action-btn hidden" id="btn_claim" onclick="return pickAction('claim')">CLAIM</button>
+  <button class="btn p20 action-btn hidden" id="btn_20p" onclick="return pickAction('20p')">20P</button>
   <button class="btn clear action-btn" id="btn_clear" onclick="return pickAction('clear')">CLEAR</button>
 </div>
 </body>
@@ -333,11 +336,11 @@ local last_action = ''
 local last_mode_refresh = ''
 while true do
   local ctx = get_front_context()
-  local mode_key = ctx.front_name .. '|' .. ctx.menu_mode .. '|' .. ctx.video_label .. '|' .. ctx.claim_label
+  local mode_key = ctx.front_name .. '|' .. ctx.menu_mode .. '|' .. ctx.video_label .. '|' .. ctx.claim_label .. '|' .. current_home_submenu
   if mode_key ~= last_mode_refresh then
     last_mode_refresh = mode_key
     set_front_app(ctx.front_name)
-    webview.eval(string.format("setActionLabels(%q, %q);", ctx.video_label, ctx.claim_label), 1)
+    webview.eval(string.format("setActionLabels(%q, %q, %q);", ctx.video_label, ctx.claim_label, '20P'), 1)
     webview.eval(string.format("setAppButtons(%q, %q);", ctx.tiktok_label, ctx.lite_label), 1)
     if ctx.menu_mode == 'home' and current_home_submenu ~= '' then
       webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
@@ -401,6 +404,12 @@ while true do
         sys.toast('Tai App')
       else
         run_clear(ctx.front_name)
+      end
+    elseif action == '20p' then
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        sys.toast('20P')
+      else
+        sys.toast('20P')
       end
     end
   elseif action == '' then
