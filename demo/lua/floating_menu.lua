@@ -16,13 +16,13 @@ local side_html = [[
 <style>
 html,body{margin:0;padding:0;background:transparent;overflow:visible;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-body{padding:6px;display:inline-block}
-#dock{width:120px;display:flex;flex-direction:column;gap:8px;align-items:stretch;justify-content:flex-start}
-.badge,.btn{width:120px;min-height:46px;border:0;border-radius:23px;color:#fff;font-size:13px;font-weight:800;letter-spacing:.2px;line-height:1.1;padding:10px 8px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.10);overflow:hidden}
-.badge{background:rgba(31,41,55,.92);border:1px solid rgba(255,255,255,.08)}
-.btn{transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;white-space:normal;word-break:break-word}
+body{padding:8px;display:inline-block}
+#dock{width:124px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:flex-start;padding:10px 8px 12px;border-radius:32px;background:linear-gradient(180deg,rgba(31,41,55,.94),rgba(51,65,85,.82));box-shadow:0 14px 34px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.06)}
+#dock.compact{padding:8px 6px 8px;border-radius:34px}
+.badge{width:108px;min-height:54px;border:1px solid rgba(255,255,255,.08);border-radius:27px;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));color:#fff;font-size:16px;font-weight:800;letter-spacing:.2px;line-height:1.1;padding:10px 8px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.btn{width:108px;min-height:44px;border:0;border-radius:22px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.2px;line-height:1.05;padding:8px 8px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.10);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;white-space:normal;word-break:break-word;overflow:hidden}
 .btn:active{transform:scale(.985)}
-.btn.active{transform:scale(1.01);box-shadow:0 0 0 2px rgba(255,255,255,.16),0 10px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.16)}
+.btn.active{transform:scale(1.01);box-shadow:0 0 0 2px rgba(255,255,255,.14),0 10px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.14)}
 .home{background:linear-gradient(135deg,#3b82f6,#2563eb)}
 .video{background:linear-gradient(135deg,#ef4444,#dc2626)}
 .p20{background:linear-gradient(135deg,#22c55e,#16a34a)}
@@ -46,6 +46,8 @@ function clearActive(){ var ids=['home','tiktok','lite','video','claim','clear']
 function setCompactMode(compact){
   window.__xxt_compact = !!compact;
   if(document.body){ document.body.classList.toggle('compact', window.__xxt_compact); }
+  var dock=document.getElementById('dock');
+  if(dock){ dock.classList.toggle('compact', window.__xxt_compact); }
 }
 function toggleCompact(){ setCompactMode(!window.__xxt_compact); return false; }
 function setMenuLayout(mode){
@@ -111,7 +113,7 @@ window.onload = lockUi;
 ]]
 
 local function show_menu()
-  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 132, height = 360, alpha = 1.0, corner_radius = 24, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 140, height = 420, alpha = 1.0, corner_radius = 32, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
