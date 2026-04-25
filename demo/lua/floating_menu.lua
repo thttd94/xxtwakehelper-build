@@ -51,7 +51,8 @@ function setMenuLayout(mode){
   var isLite = mode === 'lite';
   var homeSub = window.__xxt_home_submenu || '';
   var showHomeButtons = false;
-  var showAppButtons = isHome && !homeSub;
+  var showTikTokMain = isHome && (!homeSub || homeSub === 'tiktok');
+  var showLiteMain = isHome && (!homeSub || homeSub === 'lite');
   var showActionButtons = isTikTok || isLite || (isHome && !!homeSub);
 
   var btnHome = document.getElementById('btn_home');
@@ -62,11 +63,11 @@ function setMenuLayout(mode){
   var btnClear = document.getElementById('btn_clear');
 
   if(btnHome){ btnHome.classList.toggle('hidden', !showHomeButtons); }
-  if(btnTikTok){ btnTikTok.classList.toggle('hidden', !showAppButtons); }
-  if(btnLite){ btnLite.classList.toggle('hidden', !showAppButtons); }
+  if(btnTikTok){ btnTikTok.classList.toggle('hidden', !showTikTokMain); }
+  if(btnLite){ btnLite.classList.toggle('hidden', !showLiteMain); }
   if(btnVideo){ btnVideo.classList.toggle('hidden', !showActionButtons); }
   if(btnClaim){ btnClaim.classList.toggle('hidden', !showActionButtons); }
-  if(btnClear){ btnClear.classList.toggle('hidden', !(isHome && !!homeSub) && !isTikTok && !isLite ? false : false); }
+  if(btnClear){ btnClear.classList.toggle('hidden', false); }
 }
 function setHomeSubmenu(name){
   window.__xxt_home_submenu = name || '';
