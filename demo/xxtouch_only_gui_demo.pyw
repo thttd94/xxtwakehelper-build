@@ -1274,17 +1274,17 @@ class XXTouchOnlyDemo(tk.Tk):
         body.pack(fill='both', expand=True)
         ttk.Label(body, text='Chức năng ít dùng', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
         ttk.Label(body, text='Các nút phụ nằm riêng để giao diện chính gọn hơn', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
-        ttk.Button(body, text='Startup Script', command=lambda: (win.destroy(), self._open_startup_script_popup(router))).pack(anchor='w')
+        ttk.Button(body, text='Select Script', command=lambda: (win.destroy(), self._open_select_script_popup(router))).pack(anchor='w')
         ttk.Button(body, text='Đóng', command=win.destroy).pack(side='right', pady=(18, 0))
 
-    def _open_startup_script_popup(self, router):
+    def _open_select_script_popup(self, router):
         rows = list(self._selected_rows(router))
         if not rows:
-            self._append_router_log(router, 'STARTUP SCRIPT: không có máy nào được chọn')
+            self._append_router_log(router, 'SELECT SCRIPT: không có máy nào được chọn')
             return
 
         win = tk.Toplevel(self)
-        win.title(f'Startup Script - {router.get("name", "")}')
+        win.title(f'Select Script - {router.get("name", "")}')
         win.geometry('620x230')
         win.resizable(False, False)
         win.configure(bg='#111827')
@@ -1296,8 +1296,8 @@ class XXTouchOnlyDemo(tk.Tk):
 
         body = ttk.Frame(win, style='Card.TFrame', padding=16)
         body.pack(fill='both', expand=True)
-        ttk.Label(body, text='Cài script khởi động cho máy đã chọn', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
-        ttk.Label(body, text='Chọn file lua local, rồi nhập tên script startup sẽ chạy trên client', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
+        ttk.Label(body, text='Chọn script cho máy đã chọn', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
+        ttk.Label(body, text='File này sẽ được set thành selected script để bấm volume chạy đúng file đó', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
 
         file_row = ttk.Frame(body, style='Card.TFrame')
         file_row.pack(fill='x', pady=(0, 12))
@@ -1306,7 +1306,7 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Entry(file_row, textvariable=file_var, width=56).pack(side='left', fill='x', expand=True)
 
         def choose_file():
-            path = filedialog.askopenfilename(title='Chọn file lua startup', filetypes=[('Lua files', '*.lua'), ('All files', '*.*')])
+            path = filedialog.askopenfilename(title='Chọn file lua để select', filetypes=[('Lua files', '*.lua'), ('All files', '*.*')])
             if path:
                 file_var.set(path)
                 if not script_name_var.get().strip():
@@ -1316,7 +1316,7 @@ class XXTouchOnlyDemo(tk.Tk):
 
         name_row = ttk.Frame(body, style='Card.TFrame')
         name_row.pack(fill='x', pady=(0, 8))
-        ttk.Label(name_row, text='Tên script startup', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        ttk.Label(name_row, text='Tên script trên client', style='Sub.TLabel').pack(side='left', padx=(0, 8))
         script_name_var = tk.StringVar()
         ttk.Entry(name_row, textvariable=script_name_var, width=32).pack(side='left')
 
@@ -1329,7 +1329,7 @@ class XXTouchOnlyDemo(tk.Tk):
                 messagebox.showwarning('Thiếu file', 'Hãy chọn file lua')
                 return
             if not script_name:
-                messagebox.showwarning('Thiếu tên script', 'Hãy nhập tên script startup')
+                messagebox.showwarning('Thiếu tên script', 'Hãy nhập tên script trên client')
                 return
             try:
                 script_bytes = Path(file_path).read_bytes()
@@ -1337,11 +1337,11 @@ class XXTouchOnlyDemo(tk.Tk):
                 messagebox.showerror('Không đọc được file', str(e))
                 return
             win.destroy()
-            self._run_set_startup_script_for_router(router, script_name, script_bytes)
+            self._run_set_selected_script_for_router(router, script_name, script_bytes)
 
         actions = ttk.Frame(body, style='Card.TFrame')
         actions.pack(fill='x', pady=(18, 0))
-        ttk.Button(actions, text='Cài Startup Script', command=do_apply).pack(side='right')
+        ttk.Button(actions, text='Set Select Script', command=do_apply).pack(side='right')
         ttk.Button(actions, text='Hủy', command=win.destroy).pack(side='right', padx=(0, 8))
 
     def _open_remote_panel(self, router):
@@ -1830,19 +1830,19 @@ class XXTouchOnlyDemo(tk.Tk):
 
         self._run_parallel_rows(router, rows, task, 'UI', per_success=lambda row: f'[{row.get("machine", "?")}] UI OK')
 
-    def _run_set_startup_script_for_router(self, router, script_name, script_bytes):
+    def _run_set_selected_script_for_router(self, router, script_name, script_bytes):
         rows = self._selected_rows(router)
         if not rows:
-            self._append_router_log(router, 'STARTUP SCRIPT: không có máy nào được chọn')
+            self._append_router_log(router, 'SELECT SCRIPT: không có máy nào được chọn')
             return
         safe_name = Path(script_name).name.strip()
         if not safe_name:
-            self._append_router_log(router, 'STARTUP SCRIPT: tên script không hợp lệ')
+            self._append_router_log(router, 'SELECT SCRIPT: tên script không hợp lệ')
             return
         if not safe_name.lower().endswith('.lua'):
             safe_name += '.lua'
         remote_path = f'/var/mobile/Media/1ferver/lua/scripts/{safe_name}'
-        self._append_router_log(router, f'STARTUP SCRIPT: bắt đầu cài {safe_name} cho {len(rows)} máy')
+        self._append_router_log(router, f'SELECT SCRIPT: bắt đầu set {safe_name} cho {len(rows)} máy')
 
         def task(row):
             ip = str(row.get('ip') or '').strip()
@@ -1851,25 +1851,22 @@ class XXTouchOnlyDemo(tk.Tk):
             client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=8)
             client.write_file(remote_path, script_bytes)
             try:
-                select_resp = client._post_json('/select_startup_script_file', {'filename': safe_name})
-                client._post_json('/set_startup_run_on', {})
-                conf = client._post_json('/get_startup_conf', {})
+                select_resp = client._post_json('/select_script_file', {'filename': remote_path})
+                conf = client._post_json('/get_selected_script_file', {})
             except Exception as e:
-                raise XXTouchOpenAPIError(f'Không set được startup conf: {e}')
+                raise XXTouchOpenAPIError(f'Không set được selected script: {e}')
             conf_data = conf.get('data', conf) if isinstance(conf, dict) else {}
-            active_script = str(conf_data.get('startup_script') or '').strip()
-            startup_run = bool(conf_data.get('startup_run'))
-            if active_script != safe_name or not startup_run:
+            active_script = str(conf_data.get('filename') or '').strip()
+            if active_script not in (safe_name, remote_path):
                 details = select_resp.get('message') if isinstance(select_resp, dict) else select_resp
-                raise XXTouchOpenAPIError(f'Set startup chưa ăn, current={active_script or "<trống>"}, run={startup_run}, select={details}')
-            row['startup_script'] = safe_name
-            row['startup_run'] = True
+                raise XXTouchOpenAPIError(f'Set select chưa ăn, current={active_script or "<trống>"}, select={details}')
+            row['selected_script'] = active_script
             row['network'] = 'Online'
             row['xxtouch'] = 'Connected'
             row['updated'] = now_text()
             return row
 
-        self._run_parallel_rows(router, rows, task, 'STARTUP SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] STARTUP SCRIPT OK ({safe_name})')
+        self._run_parallel_rows(router, rows, task, 'SELECT SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] SELECT SCRIPT OK ({safe_name})')
 
     def _run_spawn_command_for_router(self, router, command, action_name, stop_first=True, read_timeout=6):
         rows = self._selected_rows(router)
