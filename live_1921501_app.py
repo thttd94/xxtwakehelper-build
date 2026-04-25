@@ -2280,7 +2280,7 @@ def clear_session_proxies(data):
         tag = str(item.get('tag', '')).strip()
         if tag.startswith('proxy_'):
             item.clear()
-            item.update({'tag': tag, 'type': 'direct'})
+            item.update({'tag': tag, 'type': 'block'})
 
 
 def remap_ip_by_tag(data):
