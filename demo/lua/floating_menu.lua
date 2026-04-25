@@ -125,11 +125,21 @@ end
 
 local current_front_app_text = 'APP ?'
 
-local function resize_menu(compact)
-  local target_h = compact and MENU_H_COMPACT or MENU_H_EXPANDED
+local current_menu_mode = 'other'
+local current_menu_compact = false
+
+local function sync_menu_view()
+  local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
   webview.show({ id = 1, html = side_html, x = MENU_X, y = MENU_Y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
   sys.msleep(80)
   webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
+  webview.eval(string.format("setMenuLayout(%q);", current_menu_mode or 'other'), 1)
+  webview.eval(string.format("setCompactMode(%s);", current_menu_compact and 'true' or 'false'), 1)
+end
+
+local function resize_menu(compact)
+  current_menu_compact = compact and true or false
+  sync_menu_view()
 end
 
 local function set_top_status(text)
@@ -150,7 +160,8 @@ local function set_front_app(text)
 end
 
 local function set_menu_layout(mode)
-  webview.eval(string.format("setMenuLayout(%q);", mode or 'other'), 1)
+  current_menu_mode = mode or 'other'
+  webview.eval(string.format("setMenuLayout(%q);", current_menu_mode), 1)
 end
 
 local function keep_state(active)
