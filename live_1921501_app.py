@@ -1454,7 +1454,17 @@ def xxtouch_run_action_on_machine(machine, port, action, app_choice='tiktok_lite
         logs.append(f'[{label}] reboot ok')
         return True, logs
     if action == 'home':
-        xxtouch_spawn_checked(ip, port, 'lua -e \'key=require("key"); key.press(0x0C, 64); print("HOME_OK")\'', timeout=15)
+        home_script = r'''lua - <<'LUA'
+local device = require("device")
+local sys = require("sys")
+while device.is_screen_locked() do
+  device.unlock_screen()
+  sys.msleep(1000)
+end
+sys.toast("HOME_OK")
+print("HOME_OK")
+LUA'''
+        xxtouch_spawn_checked(ip, port, home_script, timeout=20)
         logs.append(f'[{label}] home ok')
         return True, logs
     if action == 'lock_home':
@@ -3425,7 +3435,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not machines:
                     raise ValueError('Không tìm thấy máy để remote theo Gán IP')
                 machine = machines[0]
-                return self._send_json({'ok': True, 'url': f"http://{machine['ip']}:{port}/screen.html", 'machine': machine})
+                remote_url = f"/api/xxtouch/remote-screen?machine={quote(machine_no)}&port={quote(port)}"
+                return self._send_json({'ok': True, 'url': remote_url, 'machine': machine})
             if path == '/api/admanager/save-config':
                 cfg = load_admanager_config()
                 incoming = payload.get('config') if isinstance(payload, dict) else {}
