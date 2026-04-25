@@ -2479,40 +2479,61 @@ def run_apply(session: str, rows_override=None):
     results = []
 
     preset_data = load_json(preset_source)
-    if str(preset_source) != str(RUNTIME_SOURCE_FILE):
-        save_json(RUNTIME_SOURCE_FILE, preset_data)
+    rows = rows_override if isinstance(rows_override, list) else extract_rows(preset_data, session=session)
+    tag_to_ip_map = {
+        str(row.get('tag', '')).strip(): str(row.get('ip', '')).strip()
+        for row in (rows or [])
+        if str(row.get('tag', '')).strip().startswith('proxy_') and str(row.get('ip', '')).strip()
+    }
+    runtime_data = rebuild_gencore_rules(preset_data, tag_to_ip_map)
+    apply_ip_identity_config(runtime_data, build_ip_identity_text(runtime_data, session=session), session=session)
+    save_json(RUNTIME_SOURCE_FILE, runtime_data)
+    results.append({
+        'cmd': 'write runtime source directly',
+        'ok': True,
+        'source': str(preset_source),
+        'target': str(RUNTIME_SOURCE_FILE),
+        'count': len(tag_to_ip_map),
+    })
+
+    if str(RUNTIME_FILE) != str(RUNTIME_SOURCE_FILE):
+        save_json(RUNTIME_FILE, runtime_data)
         results.append({
-            'cmd': 'copy preset to runtime source',
+            'cmd': 'sync runtime file',
             'ok': True,
-            'source': str(preset_source),
-            'target': str(RUNTIME_SOURCE_FILE),
+            'source': str(RUNTIME_SOURCE_FILE),
+            'target': str(RUNTIME_FILE),
         })
     else:
         results.append({
-            'cmd': 'copy preset to runtime source',
+            'cmd': 'sync runtime file',
             'ok': True,
-            'source': str(preset_source),
-            'target': str(RUNTIME_SOURCE_FILE),
+            'source': str(RUNTIME_SOURCE_FILE),
+            'target': str(RUNTIME_FILE),
             'skipped': True,
         })
 
-    rows = rows_override if isinstance(rows_override, list) else extract_rows(load_json(RUNTIME_SOURCE_FILE), session=session)
-    payload = build_old_gui_update_proxy_payload_from_rows(rows)
     try:
-        resp = call_old_gui('/api/update_proxy', method='POST', data=payload)
-        results.append({
-            'cmd': 'POST /api/update_proxy',
-            'ok': True,
-            'source': str(RUNTIME_SOURCE_FILE),
-            'count': len(payload),
-            'response': resp.get('data'),
-        })
+        if GENRUNNER.exists():
+            proc = subprocess.run([str(GENRUNNER), 'check', '-c', str(RUNTIME_SOURCE_FILE)], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=30)
+            results.append({
+                'cmd': 'genrunner check',
+                'ok': proc.returncode == 0,
+                'returncode': proc.returncode,
+                'stdout': (proc.stdout or '').strip(),
+                'stderr': (proc.stderr or '').strip(),
+            })
+        else:
+            results.append({
+                'cmd': 'genrunner check',
+                'ok': False,
+                'skipped': True,
+                'error': f'Không thấy GENRUNNER: {GENRUNNER}',
+            })
     except Exception as e:
         results.append({
-            'cmd': 'POST /api/update_proxy',
+            'cmd': 'genrunner check',
             'ok': False,
-            'source': str(RUNTIME_SOURCE_FILE),
-            'count': len(payload),
             'error': str(e),
         })
     return results
@@ -3339,6 +3360,7 @@ class Handler(BaseHTTPRequestHandler):
                             failed_indexes.append(int(m.get('index') or 0))
                 else:
                     group3_app = state.get('group3App') or 'tiktok_lite'
+                    ordered_results = []
                     if action == 'event_video_180_tiktok' and len(machines) >= 10:
                         ordered_results = []
                         total = len(machines)
