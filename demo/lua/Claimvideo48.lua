@@ -324,6 +324,8 @@ local function waitAndTapClaimLoop()
  local lastTapAt = 0
  local tapCount = 0
  local lastRetryLogAt = -1
+ local seenClaimAtLeastOnce = false
+ local missingClaimSince = nil
 
  status("Khung event da o giua, cho 5s truoc khi bat dau tap ClaimVd48")
  for remain = 5, 1, -1 do
@@ -348,6 +350,8 @@ local function waitAndTapClaimLoop()
 
   local okClaim, claimX, claimY = findClaimButton()
   if okClaim then
+   seenClaimAtLeastOnce = true
+   missingClaimSince = nil
    local nowTs = os.time()
    if lastTapAt == 0 or (nowTs - lastTapAt) >= CLAIM_RETRY_SEC then
     tapCount = tapCount + 1
@@ -374,8 +378,8 @@ local function waitAndTapClaimLoop()
     if okClaimAfter then
       status("Sau 10s, ClaimVd48 van con -> xem nhu bam chua thanh cong, se tiep tuc chu ky tap")
     else
-      status("Sau 10s, ClaimVd48 da mat -> xem nhu hoan thanh")
-      return true
+      status("Sau 10s, khong con thay ClaimVd48 -> tam coi la da an, nhung se canh tiep de xac nhan")
+      missingClaimSince = os.time()
     end
    else
     local remain = CLAIM_RETRY_SEC - (nowTs - lastTapAt)
@@ -385,8 +389,19 @@ local function waitAndTapClaimLoop()
     end
    end
   else
-   status("ClaimVd48 da mat, xem nhu hoan thanh")
-   return true
+   if not seenClaimAtLeastOnce then
+    status("Chua tung thay ClaimVd48.PNG, tiep tuc quet lai")
+   else
+    if missingClaimSince == nil then
+     missingClaimSince = os.time()
+     status("ClaimVd48 dang mat, bat dau canh them de xac nhan")
+    elseif (os.time() - missingClaimSince) >= 10 then
+     status("ClaimVd48 da mat on dinh 10s -> xem nhu hoan thanh")
+     return true
+    else
+     status("ClaimVd48 van dang mat, cho xac nhan them " .. tostring(10 - (os.time() - missingClaimSince)) .. "s")
+    end
+   end
   end
 
   sys.msleep(1000)
