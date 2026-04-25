@@ -1842,14 +1842,6 @@ class XXTouchOnlyDemo(tk.Tk):
         if not safe_name.lower().endswith('.lua'):
             safe_name += '.lua'
         remote_path = f'/var/mobile/Media/1ferver/lua/scripts/{safe_name}'
-        startup_payload = {
-            'startup_script': safe_name,
-            'script': safe_name,
-            'path': remote_path,
-            'startup_path': remote_path,
-            'enable': True,
-            'enabled': True,
-        }
         self._append_router_log(router, f'STARTUP SCRIPT: bắt đầu cài {safe_name} cho {len(rows)} máy')
 
         def task(row):
@@ -1858,18 +1850,17 @@ class XXTouchOnlyDemo(tk.Tk):
                 raise XXTouchOpenAPIError('Thiếu IP')
             client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=8)
             client.write_file(remote_path, script_bytes)
-            last_error = None
-            for endpoint in ('/set_startup_conf', '/startup_conf', '/save_startup_conf'):
-                try:
-                    client._post_json(endpoint, startup_payload)
-                    row['startup_script'] = safe_name
-                    row['network'] = 'Online'
-                    row['xxtouch'] = 'Connected'
-                    row['updated'] = now_text()
-                    return row
-                except Exception as e:
-                    last_error = e
-            raise XXTouchOpenAPIError(f'Không set được startup conf: {last_error}')
+            try:
+                client._post_json('/select_startup_script_file', {'filename': safe_name})
+                client._post_json('/set_startup_run_on', {})
+            except Exception as e:
+                raise XXTouchOpenAPIError(f'Không set được startup conf: {e}')
+            row['startup_script'] = safe_name
+            row['startup_run'] = True
+            row['network'] = 'Online'
+            row['xxtouch'] = 'Connected'
+            row['updated'] = now_text()
+            return row
 
         self._run_parallel_rows(router, rows, task, 'STARTUP SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] STARTUP SCRIPT OK ({safe_name})')
 
