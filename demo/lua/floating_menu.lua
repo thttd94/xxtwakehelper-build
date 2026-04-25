@@ -116,7 +116,7 @@ window.onload = lockUi;
 ]]
 
 local function show_menu()
-  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 160, height = 560, alpha = 1.0, corner_radius = 30, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 160, height = 120, alpha = 1.0, corner_radius = 30, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
