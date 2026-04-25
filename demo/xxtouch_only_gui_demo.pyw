@@ -1297,7 +1297,7 @@ class XXTouchOnlyDemo(tk.Tk):
         body = ttk.Frame(win, style='Card.TFrame', padding=16)
         body.pack(fill='both', expand=True)
         ttk.Label(body, text='Chọn script cho máy đã chọn', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
-        ttk.Label(body, text='File này sẽ được set thành selected script để bấm volume chạy đúng file đó', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
+        ttk.Label(body, text='File này sẽ được set thành selected script, rồi tự đặt click_volume_up/down = 1', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
 
         file_row = ttk.Frame(body, style='Card.TFrame')
         file_row.pack(fill='x', pady=(0, 12))
@@ -1842,7 +1842,7 @@ class XXTouchOnlyDemo(tk.Tk):
         if not safe_name.lower().endswith('.lua'):
             safe_name += '.lua'
         remote_path = f'/var/mobile/Media/1ferver/lua/scripts/{safe_name}'
-        self._append_router_log(router, f'SELECT SCRIPT: bắt đầu set {safe_name} cho {len(rows)} máy')
+        self._append_router_log(router, f'SELECT SCRIPT: bắt đầu set {safe_name} cho {len(rows)} máy, đồng thời đặt click_volume_up/down = 1')
 
         def task(row):
             ip = str(row.get('ip') or '').strip()
@@ -1852,21 +1852,31 @@ class XXTouchOnlyDemo(tk.Tk):
             client.write_file(remote_path, script_bytes)
             try:
                 select_resp = client._post_json('/select_script_file', {'filename': remote_path})
+                client._post_json('/set_click_volume_up_action', '1')
+                client._post_json('/set_click_volume_down_action', '1')
                 conf = client._post_json('/get_selected_script_file', {})
+                volume_conf = client._post_json('/get_volume_action_conf', {})
             except Exception as e:
-                raise XXTouchOpenAPIError(f'Không set được selected script: {e}')
+                raise XXTouchOpenAPIError(f'Không set được selected script/volume action: {e}')
             conf_data = conf.get('data', conf) if isinstance(conf, dict) else {}
             active_script = str(conf_data.get('filename') or '').strip()
             if active_script not in (safe_name, remote_path):
                 details = select_resp.get('message') if isinstance(select_resp, dict) else select_resp
                 raise XXTouchOpenAPIError(f'Set select chưa ăn, current={active_script or "<trống>"}, select={details}')
+            vol_data = volume_conf.get('data', volume_conf) if isinstance(volume_conf, dict) else {}
+            up_action = str(vol_data.get('click_volume_up', '')).strip()
+            down_action = str(vol_data.get('click_volume_down', '')).strip()
+            if up_action != '1' or down_action != '1':
+                raise XXTouchOpenAPIError(f'Set volume action chưa ăn, up={up_action or "<trống>"}, down={down_action or "<trống>"}')
             row['selected_script'] = active_script
+            row['click_volume_up'] = up_action
+            row['click_volume_down'] = down_action
             row['network'] = 'Online'
             row['xxtouch'] = 'Connected'
             row['updated'] = now_text()
             return row
 
-        self._run_parallel_rows(router, rows, task, 'SELECT SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] SELECT SCRIPT OK ({safe_name})')
+        self._run_parallel_rows(router, rows, task, 'SELECT SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] SELECT SCRIPT OK ({safe_name}) | VOL UP/DOWN=1')
 
     def _run_spawn_command_for_router(self, router, command, action_name, stop_first=True, read_timeout=6):
         rows = self._selected_rows(router)
