@@ -325,6 +325,13 @@ local function waitAndTapClaimLoop()
  local tapCount = 0
  local lastRetryLogAt = -1
 
+ status("Khung event da o giua, cho 5s truoc khi bat dau tap ClaimVd48")
+ for remain = 5, 1, -1 do
+  if checkTimeout() then return false end
+  status("Con " .. tostring(remain) .. "s nua se bat dau tim va tap ClaimVd48")
+  sys.msleep(1000)
+ end
+
  while true do
   if checkTimeout() then return false end
 
