@@ -2,11 +2,16 @@ local sys = require("sys")
 local app = require("app")
 local file = require("file")
 local webview = require("webview")
+local json = require("json")
 
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
 local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
 local BID_HOME = "com.apple.springboard"
 local LUA_DIR = "/var/mobile/Media/1ferver/lib/"
+local CONTROL_DIR = "/var/mobile/Media/1ferver/floating_menu_control/"
+local JOB_FILE = CONTROL_DIR .. "job.json"
+local STOP_FILE = CONTROL_DIR .. "stop.flag"
+local RESULT_FILE = CONTROL_DIR .. "result.json"
 
 local side_html = [[
 <!doctype html>
@@ -144,6 +149,7 @@ local current_home_submenu = ''
 local current_running_action = ''
 local current_running_script_action = ''
 local pending_action = nil
+local runner_started = false
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
@@ -197,24 +203,103 @@ local function keep_state(active)
   end
 end
 
-local function run_lua_file(path)
-  current_running_script_action = current_running_action or ''
-  local code = file.reads(path)
-  if code and #tostring(code) > 0 then
-    local fn, err = load(code)
-    if fn then
-      local ok, res = pcall(fn)
-      current_running_script_action = ''
-      return ok, res
-    else
-      current_running_script_action = ''
-      sys.toast('load lỗi')
-      return false, err
+local function ensure_control_dir()
+  os.execute('mkdir -p ' .. CONTROL_DIR)
+end
+
+local function write_text(path, text)
+  local f = io.open(path, 'w')
+  if not f then return false end
+  f:write(text or '')
+  f:close()
+  return true
+end
+
+local function read_text(path)
+  local f = io.open(path, 'r')
+  if not f then return nil end
+  local s = f:read('*a')
+  f:close()
+  return s
+end
+
+local function remove_file(path)
+  os.remove(path)
+end
+
+local function ensure_runner()
+  if runner_started then return true end
+  ensure_control_dir()
+  local runner_path = CONTROL_DIR .. 'runner.lua'
+  local runner_code = [[
+local sys = require("sys")
+local json = require("json")
+local JOB_FILE = "]] .. JOB_FILE .. [["
+local STOP_FILE = "]] .. STOP_FILE .. [["
+local RESULT_FILE = "]] .. RESULT_FILE .. [["
+local function read_text(path)
+  local f = io.open(path, 'r')
+  if not f then return nil end
+  local s = f:read('*a')
+  f:close()
+  return s
+end
+local function write_text(path, text)
+  local f = io.open(path, 'w')
+  if not f then return false end
+  f:write(text or '')
+  f:close()
+  return true
+end
+local function remove_file(path)
+  os.remove(path)
+end
+while true do
+  if read_text(STOP_FILE) then
+    write_text(RESULT_FILE, json.encode({ state = 'stopped' }))
+    remove_file(STOP_FILE)
+    remove_file(JOB_FILE)
+  end
+  local raw = read_text(JOB_FILE)
+  if raw and raw ~= '' then
+    local okj, job = pcall(json.decode, raw)
+    if okj and job and job.path then
+      remove_file(JOB_FILE)
+      write_text(RESULT_FILE, json.encode({ state = 'running', action = job.action or '', path = job.path }))
+      local code = read_text(job.path)
+      if code and code ~= '' then
+        local fn, err = load(code)
+        if fn then
+          local ok, res = pcall(fn)
+          write_text(RESULT_FILE, json.encode({ state = ok and 'done' or 'error', action = job.action or '', message = tostring(res or '') }))
+        else
+          write_text(RESULT_FILE, json.encode({ state = 'error', action = job.action or '', message = tostring(err or 'load error') }))
+        end
+      else
+        write_text(RESULT_FILE, json.encode({ state = 'error', action = job.action or '', message = 'file not found' }))
+      end
     end
   end
-  current_running_script_action = ''
-  sys.toast('không thấy file')
-  return false
+  sys.msleep(300)
+end
+]]
+  write_text(runner_path, runner_code)
+  local ok = pcall(sys.began_to_run, runner_path)
+  runner_started = ok and true or false
+  return runner_started
+end
+
+local function queue_script_run(action_name, path)
+  ensure_runner()
+  remove_file(STOP_FILE)
+  local payload = json.encode({ action = action_name or '', path = path })
+  write_text(JOB_FILE, payload)
+  current_running_script_action = action_name or ''
+  return true
+end
+
+local function run_lua_file(path)
+  return queue_script_run(current_running_action or '', path)
 end
 
 local function unlock_if_needed()
@@ -468,8 +553,8 @@ local function stop_current_script_action()
   if current_running_script_action == '' then
     return false
   end
-  pcall(sys.stop_run)
-  current_running_script_action = ''
+  ensure_runner()
+  write_text(STOP_FILE, '1')
   current_running_action = ''
   set_top_status('Đã dừng script, chờ chạy lệnh mới')
   sys.toast('Đã stop script')
@@ -532,7 +617,31 @@ local function execute_action(action, ctx)
   current_running_action = ''
 end
 
+local function poll_runner_result()
+  local raw = read_text(RESULT_FILE)
+  if not raw or raw == '' then return end
+  local ok, data = pcall(json.decode, raw)
+  if not ok or type(data) ~= 'table' then return end
+  if data.state == 'running' then
+    current_running_script_action = tostring(data.action or '')
+  elseif data.state == 'done' then
+    current_running_script_action = ''
+    set_top_status('Hoàn tất: ' .. tostring(data.action or 'script'))
+    remove_file(RESULT_FILE)
+  elseif data.state == 'stopped' then
+    current_running_script_action = ''
+    set_top_status('Đã dừng script')
+    remove_file(RESULT_FILE)
+  elseif data.state == 'error' then
+    current_running_script_action = ''
+    sys.toast('Script lỗi: ' .. tostring(data.message or 'unknown'))
+    set_top_status('Script lỗi: ' .. tostring(data.action or ''))
+    remove_file(RESULT_FILE)
+  end
+end
+
 show_menu(MENU_H_EXPANDED)
+ensure_runner()
 local last_action = ''
 local last_mode_refresh = ''
 while true do
@@ -554,7 +663,9 @@ while true do
     end
   end
 
-  if pending_action then
+  poll_runner_result()
+
+  if pending_action and current_running_script_action == '' then
     local queued = pending_action
     pending_action = nil
     sys.msleep(2000)
