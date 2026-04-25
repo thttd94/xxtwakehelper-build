@@ -51,7 +51,7 @@ local function findImage(img, sim, x1, y1, x2, y2)
 end
 
 local function findCoin()
- return findImage(COIN_IMG, 85, 0, 0, 750, 1334)
+ return findImage(COIN_IMG, 85, 40, 20, 240, 180)
 end
 
 local function findClaimButton()
