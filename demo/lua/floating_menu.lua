@@ -14,22 +14,21 @@ local side_html = [[
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,user-scalable=no">
 <style>
-html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;padding:0;background:transparent;overflow:visible;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-body{padding:10px}
-#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:10px;align-items:stretch;justify-content:flex-start;padding:10px;border-radius:30px;background:linear-gradient(180deg,rgba(15,23,42,.82),rgba(17,24,39,.68));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 42px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.10)}
-.badge{width:100%;min-height:54px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));color:#fff;font-size:18px;font-weight:800;letter-spacing:.4px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 12px;border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 24px rgba(0,0,0,.18)}
-.btn{width:100%;height:68px;border:0;border-radius:20px;color:#fff;font-size:17px;font-weight:800;letter-spacing:.5px;box-shadow:0 10px 24px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.14);opacity:1;transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;outline:none}
-.btn:active{transform:scale(.98)}
-.btn.active{transform:scale(1.02);box-shadow:0 0 0 3px rgba(255,255,255,.18),0 14px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.18)}
+body{padding:8px;display:inline-block}
+#dock{width:156px;display:flex;flex-direction:column;gap:8px;align-items:stretch;justify-content:flex-start;padding:8px;border-radius:28px;background:linear-gradient(180deg,rgba(15,23,42,.88),rgba(30,41,59,.78));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 16px 36px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08)}
+.badge{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.06));color:#fff;font-size:16px;font-weight:800;letter-spacing:.2px;line-height:1.1;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 12px;border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.btn{width:100%;min-height:56px;border:0;border-radius:18px;color:#fff;font-size:15px;font-weight:800;letter-spacing:.3px;padding:0 10px;box-shadow:0 8px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.10);opacity:1;transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;outline:none;white-space:normal;word-break:break-word;text-align:center}
+.btn:active{transform:scale(.985)}
+.btn.active{transform:scale(1.01);box-shadow:0 0 0 2px rgba(255,255,255,.16),0 10px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.16)}
 .home{background:linear-gradient(135deg,#3b82f6,#2563eb)}
 .video{background:linear-gradient(135deg,#ef4444,#dc2626)}
 .p20{background:linear-gradient(135deg,#22c55e,#16a34a)}
 .claim{background:linear-gradient(135deg,#fb923c,#f97316)}
 .clear{background:linear-gradient(135deg,#a855f7,#7c3aed)}
-.app{background:linear-gradient(135deg,#1f2937,#111827)}
+.app{background:linear-gradient(135deg,#334155,#111827)}
 .compact .action-btn{display:none}
-.compact #dock{justify-content:flex-start}
 .hidden{display:none!important}
 </style>
 <script>
@@ -111,7 +110,7 @@ window.onload = lockUi;
 ]]
 
 local function show_menu()
-  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 160, height = 560, alpha = 1.0, corner_radius = 30, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 172, height = 420, alpha = 1.0, corner_radius = 30, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
