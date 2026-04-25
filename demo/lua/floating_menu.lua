@@ -2,16 +2,11 @@ local sys = require("sys")
 local app = require("app")
 local file = require("file")
 local webview = require("webview")
-local json = require("json")
 
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
 local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
 local BID_HOME = "com.apple.springboard"
 local LUA_DIR = "/var/mobile/Media/1ferver/lib/"
-local CONTROL_DIR = "/var/mobile/Media/1ferver/floating_menu_control/"
-local JOB_FILE = CONTROL_DIR .. "job.json"
-local STOP_FILE = CONTROL_DIR .. "stop.flag"
-local RESULT_FILE = CONTROL_DIR .. "result.json"
 
 local side_html = [[
 <!doctype html>
@@ -40,6 +35,7 @@ function pickAction(name){ markAction(); window.__xxt_action = name; return fals
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
 window.__xxt_home_submenu = '';
+window.__xxt_current_mode = 'other';
 function setActionLabels(video, claim, p20){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); var c=document.getElementById('btn_20p'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } if(c){ c.textContent=p20 || '20P'; } }
 function setAppButtons(tt, lite){ var a=document.getElementById('btn_tiktok'); var b=document.getElementById('btn_lite'); if(a){ a.textContent=tt; } if(b){ b.textContent=lite; } }
 function setClearLabel(text){ var el=document.getElementById('btn_clear'); if(el){ el.textContent=text; } }
@@ -52,6 +48,7 @@ function setCompactMode(compact){
 }
 function toggleCompact(){ markAction(); setCompactMode(!window.__xxt_compact); window.__xxt_action = window.__xxt_compact ? '__compact_on__' : '__compact_off__'; return false; }
 function setMenuLayout(mode){
+  window.__xxt_current_mode = mode || 'other';
   var isHome = mode === 'home';
   var isTikTok = mode === 'tiktok';
   var isLite = mode === 'lite';
@@ -79,7 +76,11 @@ function setMenuLayout(mode){
 }
 function setHomeSubmenu(name){
   window.__xxt_home_submenu = name || '';
-  setMenuLayout('home');
+  if(window.__xxt_current_mode === 'home'){
+    setMenuLayout('home');
+  } else {
+    setMenuLayout(window.__xxt_current_mode || 'other');
+  }
 }
 function autoHideLoop(){
   setInterval(function(){
@@ -146,10 +147,6 @@ local current_front_app_text = 'APP ?'
 local current_menu_mode = 'other'
 local current_menu_compact = false
 local current_home_submenu = ''
-local current_running_action = ''
-local current_running_script_action = ''
-local pending_action = nil
-local runner_started = false
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
@@ -203,103 +200,19 @@ local function keep_state(active)
   end
 end
 
-local function ensure_control_dir()
-  os.execute('mkdir -p ' .. CONTROL_DIR)
-end
-
-local function write_text(path, text)
-  local f = io.open(path, 'w')
-  if not f then return false end
-  f:write(text or '')
-  f:close()
-  return true
-end
-
-local function read_text(path)
-  local f = io.open(path, 'r')
-  if not f then return nil end
-  local s = f:read('*a')
-  f:close()
-  return s
-end
-
-local function remove_file(path)
-  os.remove(path)
-end
-
-local function ensure_runner()
-  if runner_started then return true end
-  ensure_control_dir()
-  local runner_path = CONTROL_DIR .. 'runner.lua'
-  local runner_code = [[
-local sys = require("sys")
-local json = require("json")
-local JOB_FILE = "]] .. JOB_FILE .. [["
-local STOP_FILE = "]] .. STOP_FILE .. [["
-local RESULT_FILE = "]] .. RESULT_FILE .. [["
-local function read_text(path)
-  local f = io.open(path, 'r')
-  if not f then return nil end
-  local s = f:read('*a')
-  f:close()
-  return s
-end
-local function write_text(path, text)
-  local f = io.open(path, 'w')
-  if not f then return false end
-  f:write(text or '')
-  f:close()
-  return true
-end
-local function remove_file(path)
-  os.remove(path)
-end
-while true do
-  if read_text(STOP_FILE) then
-    write_text(RESULT_FILE, json.encode({ state = 'stopped' }))
-    remove_file(STOP_FILE)
-    remove_file(JOB_FILE)
-  end
-  local raw = read_text(JOB_FILE)
-  if raw and raw ~= '' then
-    local okj, job = pcall(json.decode, raw)
-    if okj and job and job.path then
-      remove_file(JOB_FILE)
-      write_text(RESULT_FILE, json.encode({ state = 'running', action = job.action or '', path = job.path }))
-      local code = read_text(job.path)
-      if code and code ~= '' then
-        local fn, err = load(code)
-        if fn then
-          local ok, res = pcall(fn)
-          write_text(RESULT_FILE, json.encode({ state = ok and 'done' or 'error', action = job.action or '', message = tostring(res or '') }))
-        else
-          write_text(RESULT_FILE, json.encode({ state = 'error', action = job.action or '', message = tostring(err or 'load error') }))
-        end
-      else
-        write_text(RESULT_FILE, json.encode({ state = 'error', action = job.action or '', message = 'file not found' }))
-      end
+local function run_lua_file(path)
+  local code = file.reads(path)
+  if code and #tostring(code) > 0 then
+    local fn, err = load(code)
+    if fn then
+      return pcall(fn)
+    else
+      sys.toast('load lỗi')
+      return false, err
     end
   end
-  sys.msleep(300)
-end
-]]
-  write_text(runner_path, runner_code)
-  local ok = pcall(sys.began_to_run, runner_path)
-  runner_started = ok and true or false
-  return runner_started
-end
-
-local function queue_script_run(action_name, path)
-  ensure_runner()
-  remove_file(STOP_FILE)
-  local payload = json.encode({ action = action_name or '', path = path })
-  write_text(JOB_FILE, payload)
-  current_running_script_action = action_name or ''
-  return true
-end
-
-local function run_lua_file(path)
-  return queue_script_run(current_running_action or '', path)
+  sys.toast('không thấy file')
+  return false
 end
 
 local function unlock_if_needed()
@@ -549,20 +462,7 @@ local function run_home_install()
   return false
 end
 
-local function stop_current_script_action()
-  if current_running_script_action == '' then
-    return false
-  end
-  ensure_runner()
-  write_text(STOP_FILE, '1')
-  current_running_action = ''
-  set_top_status('Đã dừng script, chờ chạy lệnh mới')
-  sys.toast('Đã stop script')
-  return true
-end
-
 local function execute_action(action, ctx)
-  current_running_action = action or ''
   if action == '__compact_on__' then
     resize_menu(true)
   elseif action == '__compact_off__' then
@@ -614,34 +514,9 @@ local function execute_action(action, ctx)
   elseif action == '20p' then
     run_20p(ctx.front_name)
   end
-  current_running_action = ''
-end
-
-local function poll_runner_result()
-  local raw = read_text(RESULT_FILE)
-  if not raw or raw == '' then return end
-  local ok, data = pcall(json.decode, raw)
-  if not ok or type(data) ~= 'table' then return end
-  if data.state == 'running' then
-    current_running_script_action = tostring(data.action or '')
-  elseif data.state == 'done' then
-    current_running_script_action = ''
-    set_top_status('Hoàn tất: ' .. tostring(data.action or 'script'))
-    remove_file(RESULT_FILE)
-  elseif data.state == 'stopped' then
-    current_running_script_action = ''
-    set_top_status('Đã dừng script')
-    remove_file(RESULT_FILE)
-  elseif data.state == 'error' then
-    current_running_script_action = ''
-    sys.toast('Script lỗi: ' .. tostring(data.message or 'unknown'))
-    set_top_status('Script lỗi: ' .. tostring(data.action or ''))
-    remove_file(RESULT_FILE)
-  end
 end
 
 show_menu(MENU_H_EXPANDED)
-ensure_runner()
 local last_action = ''
 local last_mode_refresh = ''
 while true do
@@ -663,25 +538,11 @@ while true do
     end
   end
 
-  poll_runner_result()
-
-  if pending_action and current_running_script_action == '' then
-    local queued = pending_action
-    pending_action = nil
-    sys.msleep(2000)
-    execute_action(queued, ctx)
-  end
-
   local action = tostring(webview.eval('window.__xxt_action || "";', 1) or '')
   if action ~= '' and action ~= last_action then
     last_action = action
     webview.eval('window.__xxt_action = "";', 1)
-    if current_running_script_action ~= '' and action ~= current_running_script_action then
-      pending_action = action
-      stop_current_script_action()
-    else
-      execute_action(action, ctx)
-    end
+    execute_action(action, ctx)
   elseif action == '' then
     last_action = ''
   end
