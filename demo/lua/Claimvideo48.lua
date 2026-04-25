@@ -441,34 +441,49 @@ while (device.is_screen_locked()) do
 end
 
 status("Bat dau Claimvideo48")
+status("Buoc 1: tat TikTok cu")
 pcall(app.quit, "com.ss.iphone.ugc.Ame")
 sys.msleep(1200)
+status("Buoc 2: mo lai TikTok")
 app.run("com.ss.iphone.ugc.Ame")
-status("Da mo TikTok, cho 20s roi bam vao vi tri co dinh")
+status("Buoc 3: cho 20s roi bam vi tri 674,1280")
 sys.msleep(20000)
 touch.tap(674, 1280)
-status("Da bam vi tri 674,1280")
+status("Buoc 3 OK: da bam vi tri 674,1280")
 
+status("Buoc 4: dang cho coin.PNG xuat hien")
 local coinWaitStart = os.time()
 local tappedRetryAfter60 = false
+local lastCoinWaitLog = -1
 while true do
  if checkTimeout() then return true end
  local okCoin, coinX, coinY = findCoin()
  if okCoin then
+  status("Buoc 4: da thay coin.PNG tai " .. tostring(coinX) .. "," .. tostring(coinY))
   touch.tap(coinX + 10, coinY + 10)
-  status("Da bam coin.PNG")
+  status("Buoc 4 OK: da bam coin.PNG")
   break
  end
 
- if not tappedRetryAfter60 and (os.time() - coinWaitStart) >= 60 then
+ local waited = os.time() - coinWaitStart
+ local waitBucket = math.floor(waited / 5)
+ if waitBucket ~= lastCoinWaitLog then
+  lastCoinWaitLog = waitBucket
+  status("Buoc 4: dang cho coin.PNG, da cho " .. tostring(waited) .. "s")
+ end
+
+ if not tappedRetryAfter60 and waited >= 60 then
   touch.tap(674, 1280)
-  status("Sau 60s chua thay coin.PNG, bam lai vi tri 674,1280")
+  status("Buoc 4: sau 60s chua thay coin.PNG, bam lai vi tri 674,1280")
   tappedRetryAfter60 = true
  end
 
  sys.msleep(1000)
 end
 
+status("Buoc 5: cho 10s truoc khi tim khung claim video")
 sys.msleep(10000)
+status("Buoc 6: bat dau tim khung claim video")
 runSearchFlow(30)
+status("Claimvideo48 da chay xong")
 return true
