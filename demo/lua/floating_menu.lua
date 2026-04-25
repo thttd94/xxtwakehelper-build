@@ -33,9 +33,11 @@ function markAction(){ window.__xxt_last_action_at = Date.now(); }
 function pickAction(name){ markAction(); window.__xxt_action = name; return false; }
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
+window.__xxt_home_submenu = '';
 function setActionLabels(video, claim){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } }
 function setAppButtons(tt, lite){ var a=document.getElementById('btn_tiktok'); var b=document.getElementById('btn_lite'); if(a){ a.textContent=tt; } if(b){ b.textContent=lite; } }
 function setClearLabel(text){ var el=document.getElementById('btn_clear'); if(el){ el.textContent=text; } }
+function setHomeSubmenuLabels(nurtureLabel, clearLabel, installLabel){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); var c=document.getElementById('btn_clear'); if(a){ a.textContent=nurtureLabel; } if(b){ b.textContent=clearLabel; } if(c){ c.textContent=installLabel; } }
 function setActive(name){ var ids=['home','tiktok','lite','video','claim','clear']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } var target=document.getElementById('btn_'+name); if(target){ target.classList.add('active'); } }
 function clearActive(){ var ids=['home','tiktok','lite','video','claim','clear']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('btn_'+ids[i]); if(el){ el.classList.remove('active'); } } }
 function setCompactMode(compact){
@@ -47,9 +49,10 @@ function setMenuLayout(mode){
   var isHome = mode === 'home';
   var isTikTok = mode === 'tiktok';
   var isLite = mode === 'lite';
-  var showHomeButtons = isHome;
-  var showAppButtons = isHome;
-  var showActionButtons = isTikTok || isLite;
+  var homeSub = window.__xxt_home_submenu || '';
+  var showHomeButtons = false;
+  var showAppButtons = isHome && !homeSub;
+  var showActionButtons = isTikTok || isLite || (isHome && !!homeSub);
 
   var btnHome = document.getElementById('btn_home');
   var btnTikTok = document.getElementById('btn_tiktok');
@@ -63,7 +66,11 @@ function setMenuLayout(mode){
   if(btnLite){ btnLite.classList.toggle('hidden', !showAppButtons); }
   if(btnVideo){ btnVideo.classList.toggle('hidden', !showActionButtons); }
   if(btnClaim){ btnClaim.classList.toggle('hidden', !showActionButtons); }
-  if(btnClear){ btnClear.classList.remove('hidden'); }
+  if(btnClear){ btnClear.classList.toggle('hidden', !(isHome && !!homeSub) && !isTikTok && !isLite ? false : false); }
+}
+function setHomeSubmenu(name){
+  window.__xxt_home_submenu = name || '';
+  setMenuLayout('home');
 }
 function autoHideLoop(){
   setInterval(function(){
@@ -127,6 +134,7 @@ local current_front_app_text = 'APP ?'
 
 local current_menu_mode = 'other'
 local current_menu_compact = false
+local current_home_submenu = ''
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
@@ -134,6 +142,7 @@ local function sync_menu_view()
   sys.msleep(80)
   webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
   webview.eval(string.format("setMenuLayout(%q);", current_menu_mode or 'other'), 1)
+  webview.eval(string.format("setHomeSubmenu(%q);", current_home_submenu or ''), 1)
   webview.eval(string.format("setCompactMode(%s);", current_menu_compact and 'true' or 'false'), 1)
 end
 
@@ -161,7 +170,16 @@ end
 
 local function set_menu_layout(mode)
   current_menu_mode = mode or 'other'
+  if current_menu_mode ~= 'home' then
+    current_home_submenu = ''
+    webview.eval("setHomeSubmenu('');", 1)
+  end
   webview.eval(string.format("setMenuLayout(%q);", current_menu_mode), 1)
+end
+
+local function set_home_submenu(name)
+  current_home_submenu = name or ''
+  webview.eval(string.format("setHomeSubmenu(%q);", current_home_submenu), 1)
 end
 
 local function keep_state(active)
@@ -319,8 +337,15 @@ while true do
     set_front_app(ctx.front_name)
     webview.eval(string.format("setActionLabels(%q, %q);", ctx.video_label, ctx.claim_label), 1)
     webview.eval(string.format("setAppButtons(%q, %q);", ctx.tiktok_label, ctx.lite_label), 1)
-    webview.eval("setClearLabel('CLEAR');", 1)
+    if ctx.menu_mode == 'home' and current_home_submenu ~= '' then
+      webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+    else
+      webview.eval("setClearLabel('CLEAR');", 1)
+    end
     set_menu_layout(ctx.menu_mode)
+    if ctx.menu_mode == 'home' then
+      set_home_submenu(current_home_submenu)
+    end
   end
 
   local action = tostring(webview.eval('window.__xxt_action || "";', 1) or '')
@@ -334,15 +359,47 @@ while true do
     elseif action == 'home' then
       run_home(ctx.front_name)
     elseif action == 'tiktok' then
-      run_open_tiktok()
+      if current_menu_mode == 'home' then
+        if current_home_submenu == 'tiktok' then
+          set_home_submenu('')
+        else
+          set_home_submenu('tiktok')
+          webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+        end
+        set_menu_layout('home')
+      else
+        run_open_tiktok()
+      end
     elseif action == 'lite' then
-      run_open_lite()
+      if current_menu_mode == 'home' then
+        if current_home_submenu == 'lite' then
+          set_home_submenu('')
+        else
+          set_home_submenu('lite')
+          webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+        end
+        set_menu_layout('home')
+      else
+        run_open_lite()
+      end
     elseif action == 'video' then
-      run_video(ctx.front_name)
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        sys.toast('Nuoi Phoi')
+      else
+        run_video(ctx.front_name)
+      end
     elseif action == 'claim' then
-      run_claim(ctx.front_name)
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        sys.toast('Xoa App')
+      else
+        run_claim(ctx.front_name)
+      end
     elseif action == 'clear' then
-      run_clear(ctx.front_name)
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        sys.toast('Tai App')
+      else
+        run_clear(ctx.front_name)
+      end
     end
   elseif action == '' then
     last_action = ''
