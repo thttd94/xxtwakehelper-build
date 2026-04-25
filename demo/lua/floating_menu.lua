@@ -14,13 +14,20 @@ local side_html = [[
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,user-scalable=no">
 <style>
-html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:flex-start;padding:12px 8px}
-.badge{width:132px;min-height:56px;border-radius:24px;background:rgba(15,23,42,.92);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 10px;border:0;box-shadow:0 12px 28px rgba(0,0,0,.28)}
-.btn{width:132px;height:92px;border:0;border-radius:26px;color:#fff;font-size:24px;font-weight:700;box-shadow:0 12px 28px rgba(0,0,0,.28);opacity:.96;transition:all .12s ease;outline:none}
-.btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
-.home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}
+body{padding:10px}
+#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:10px;align-items:stretch;justify-content:flex-start;padding:10px;border-radius:30px;background:linear-gradient(180deg,rgba(15,23,42,.82),rgba(17,24,39,.68));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 42px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.10)}
+.badge{width:100%;min-height:54px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));color:#fff;font-size:18px;font-weight:800;letter-spacing:.4px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 12px;border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 24px rgba(0,0,0,.18)}
+.btn{width:100%;height:68px;border:0;border-radius:20px;color:#fff;font-size:17px;font-weight:800;letter-spacing:.5px;box-shadow:0 10px 24px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.14);opacity:1;transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;outline:none}
+.btn:active{transform:scale(.98)}
+.btn.active{transform:scale(1.02);box-shadow:0 0 0 3px rgba(255,255,255,.18),0 14px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.18)}
+.home{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.video{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.p20{background:linear-gradient(135deg,#22c55e,#16a34a)}
+.claim{background:linear-gradient(135deg,#fb923c,#f97316)}
+.clear{background:linear-gradient(135deg,#a855f7,#7c3aed)}
+.app{background:linear-gradient(135deg,#1f2937,#111827)}
 .compact .action-btn{display:none}
 .compact #dock{justify-content:flex-start}
 .hidden{display:none!important}
@@ -104,7 +111,7 @@ window.onload = lockUi;
 ]]
 
 local function show_menu()
-  webview.show({ id = 1, html = side_html, x = 8, y = 96, width = 150, height = 700, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 160, height = 560, alpha = 1.0, corner_radius = 30, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
