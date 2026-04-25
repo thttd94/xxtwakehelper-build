@@ -17,10 +17,10 @@ local side_html = [[
 html,body{margin:0;padding:0;background:transparent;overflow:visible;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 body{padding:8px;display:inline-block}
-#dock{width:114px;display:flex;flex-direction:column;gap:9px;align-items:center;justify-content:flex-start;padding:10px 7px 14px;border-radius:38px;background:linear-gradient(180deg,rgba(36,43,67,.95),rgba(52,61,89,.84));box-shadow:0 14px 34px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.06)}
-#dock.compact{padding-bottom:10px}
-.badge{width:84px;height:84px;border:1px solid rgba(255,255,255,.08);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));color:#fff;font-size:14px;font-weight:800;letter-spacing:.15px;line-height:1.0;padding:8px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.btn{width:80px;height:80px;border:0;border-radius:22px;color:#fff;font-size:13px;font-weight:900;letter-spacing:.15px;line-height:1.0;padding:8px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.10);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;white-space:normal;word-break:break-word;overflow:hidden}
+#dock{width:74px;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:flex-start;padding:8px 4px 10px;border-radius:26px;background:linear-gradient(180deg,rgba(36,43,67,.95),rgba(52,61,89,.84));box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06)}
+#dock.compact{padding-bottom:8px}
+.badge{width:52px;height:52px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));color:#fff;font-size:9px;font-weight:800;letter-spacing:.1px;line-height:1.0;padding:4px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.btn{width:48px;height:48px;border:0;border-radius:14px;color:#fff;font-size:8px;font-weight:900;letter-spacing:.1px;line-height:1.0;padding:4px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 12px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.10);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;white-space:normal;word-break:break-word;overflow:hidden}
 .btn:active{transform:scale(.985)}
 .btn.active{transform:scale(1.01);box-shadow:0 0 0 2px rgba(255,255,255,.14),0 10px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.14)}
 .home{background:linear-gradient(135deg,#3b82f6,#2563eb)}
@@ -113,7 +113,7 @@ window.onload = lockUi;
 ]]
 
 local function show_menu()
-  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 130, height = 560, alpha = 1.0, corner_radius = 38, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = 8, y = 88, width = 86, height = 340, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
