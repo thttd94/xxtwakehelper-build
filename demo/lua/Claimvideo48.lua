@@ -354,8 +354,29 @@ local function waitAndTapClaimLoop()
     status("Da thay ClaimVd48 tai " .. tostring(claimX) .. "," .. tostring(claimY) .. " | bam lan " .. tostring(tapCount))
     touch.tap(claimX + 10, claimY + 10)
     lastTapAt = nowTs
-    status("Da bam ClaimVd48 lan " .. tostring(tapCount) .. ", se kiem tra lai sau 10s")
     lastRetryLogAt = nowTs
+    status("Da bam ClaimVd48 lan " .. tostring(tapCount) .. ", cho 10s roi quet lai ket qua")
+
+    sys.msleep(10000)
+    if checkTimeout() then return false end
+
+    local okCheckAfter, _, yCheckAfter = findCheckByAnyImage()
+    if not okCheckAfter then
+      status("Sau khi bam ClaimVd48, da mat khung event")
+      return "lost"
+    end
+    if not isCheckInGoodZone(yCheckAfter) then
+      status("Sau khi bam ClaimVd48, khung event da lech khoi vung giua")
+      return "bad_zone"
+    end
+
+    local okClaimAfter = findClaimButton()
+    if okClaimAfter then
+      status("Sau 10s, ClaimVd48 van con -> xem nhu bam chua thanh cong, se tiep tuc chu ky tap")
+    else
+      status("Sau 10s, ClaimVd48 da mat -> xem nhu hoan thanh")
+      return true
+    end
    else
     local remain = CLAIM_RETRY_SEC - (nowTs - lastTapAt)
     if nowTs ~= lastRetryLogAt then
