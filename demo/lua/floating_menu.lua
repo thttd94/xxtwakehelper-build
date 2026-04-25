@@ -123,9 +123,13 @@ local function show_menu(height)
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
+local current_front_app_text = 'APP ?'
+
 local function resize_menu(compact)
   local target_h = compact and MENU_H_COMPACT or MENU_H_EXPANDED
   webview.show({ id = 1, html = side_html, x = MENU_X, y = MENU_Y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  sys.msleep(80)
+  webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
 end
 
 local function set_top_status(text)
@@ -141,7 +145,8 @@ local function set_active(active)
 end
 
 local function set_front_app(text)
-  webview.eval(string.format("setFrontApp(%q);", text or 'APP ?'), 1)
+  current_front_app_text = text or 'APP ?'
+  webview.eval(string.format("setFrontApp(%q);", current_front_app_text), 1)
 end
 
 local function set_menu_layout(mode)
