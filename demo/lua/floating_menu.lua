@@ -16,9 +16,9 @@ local side_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:flex-start;padding:12px 8px}
-.badge{width:132px;min-height:56px;border-radius:24px;background:rgba(15,23,42,.92);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 10px;border:0;box-shadow:0 12px 28px rgba(0,0,0,.28)}
-.btn{width:132px;height:92px;border:0;border-radius:32px;color:#fff;font-size:24px;font-weight:700;box-shadow:0 12px 28px rgba(0,0,0,.28);opacity:.96;transition:all .12s ease;outline:none}
+#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:flex-start;padding:12px 8px}
+.badge{width:96px;min-height:44px;border-radius:22px;background:rgba(15,23,42,.92);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24)}
+.btn{width:58px;height:58px;border:0;border-radius:29px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0}
 .btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
 .home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}
 .compact .action-btn{display:none}
@@ -28,7 +28,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overf
 <script>
 window.__xxt_action = '';
 window.__xxt_compact = false;
-function pickAction(name){ window.__xxt_action = name; return false; }
+window.__xxt_last_action_at = Date.now();
+function markAction(){ window.__xxt_last_action_at = Date.now(); }
+function pickAction(name){ markAction(); window.__xxt_action = name; return false; }
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
 function setActionLabels(video, claim){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } }
@@ -40,7 +42,7 @@ function setCompactMode(compact){
   window.__xxt_compact = !!compact;
   if(document.body){ document.body.classList.toggle('compact', window.__xxt_compact); }
 }
-function toggleCompact(){ setCompactMode(!window.__xxt_compact); return false; }
+function toggleCompact(){ markAction(); setCompactMode(!window.__xxt_compact); return false; }
 function setMenuLayout(mode){
   var isHome = mode === 'home';
   var isTikTok = mode === 'tiktok';
@@ -63,7 +65,14 @@ function setMenuLayout(mode){
   if(btnClaim){ btnClaim.classList.toggle('hidden', !showActionButtons); }
   if(btnClear){ btnClear.classList.remove('hidden'); }
 }
-window.onload = function(){ lockUi(); setCompactMode(false); setMenuLayout('other'); };
+function autoHideLoop(){
+  setInterval(function(){
+    if(!window.__xxt_compact && (Date.now() - window.__xxt_last_action_at) >= 30000){
+      setCompactMode(true);
+    }
+  }, 1000);
+}
+window.onload = function(){ lockUi(); setCompactMode(false); setMenuLayout('other'); autoHideLoop(); };
 </script>
 </head>
 <body>
