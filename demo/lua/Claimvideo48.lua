@@ -12,7 +12,7 @@ local CLAIM_IMG = IMG_DIR .. "ClaimVd48.PNG"
 
 local MAX_RUNTIME_SEC = 3 * 60 * 60
 local SCRIPT_START_AT = os.time()
-local CLAIM_RETRY_SEC = 15 * 60
+local CLAIM_RETRY_SEC = 10
 
 local GOOD_Y_MIN = 360
 local GOOD_Y_MAX = 620
@@ -322,16 +322,20 @@ end
 
 local function waitAndTapClaimLoop()
  local lastTapAt = 0
+ local tapCount = 0
+ local lastRetryLogAt = -1
 
  while true do
   if checkTimeout() then return false end
 
   local okCheck, _, yCheck = findCheckByAnyImage()
   if not okCheck then
+   status("Dang canh ClaimVd48 nhung da mat khung event")
    return "lost"
   end
 
   if not isCheckInGoodZone(yCheck) then
+   status("Dang canh ClaimVd48 nhung khung event da lech khoi vung giua")
    return "bad_zone"
   end
 
@@ -339,12 +343,21 @@ local function waitAndTapClaimLoop()
   if okClaim then
    local nowTs = os.time()
    if lastTapAt == 0 or (nowTs - lastTapAt) >= CLAIM_RETRY_SEC then
+    tapCount = tapCount + 1
+    status("Da thay ClaimVd48 tai " .. tostring(claimX) .. "," .. tostring(claimY) .. " | bam lan " .. tostring(tapCount))
     touch.tap(claimX + 10, claimY + 10)
-    status("Da bam ClaimVd48")
     lastTapAt = nowTs
+    status("Da bam ClaimVd48 lan " .. tostring(tapCount) .. ", se kiem tra lai sau 10s")
+    lastRetryLogAt = nowTs
+   else
+    local remain = CLAIM_RETRY_SEC - (nowTs - lastTapAt)
+    if nowTs ~= lastRetryLogAt then
+     status("ClaimVd48 van con, cho " .. tostring(remain) .. "s de tap lai")
+     lastRetryLogAt = nowTs
+    end
    end
   else
-   status("ClaimVd48 da mat, ket thuc")
+   status("ClaimVd48 da mat, xem nhu hoan thanh")
    return true
   end
 
