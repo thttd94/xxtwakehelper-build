@@ -18,13 +18,17 @@ local links = {
 local repeat_count = 3
 local interval_ms = 45 * 60 * 1000
 
+local function status(text)
+ return true
+end
+
 local function wait_countdown(ms, label)
  local remain = ms
  local lastShown = -1
  while remain > 0 do
   local sec = math.ceil(remain / 1000)
   if sec ~= lastShown then
-   sys.toast((label or "Chờ lần tiếp theo") .. " " .. tostring(sec) .. "s")
+   status((label or "Chờ lần tiếp theo") .. " " .. tostring(sec) .. "s")
    lastShown = sec
   end
   local step = remain < 1000 and remain or 1000
@@ -43,7 +47,7 @@ local function run_once(round)
   sys.msleep(1000)
  end
 
- sys.toast("EventVideo180 TikTok lần " .. tostring(round) .. " đang chạy")
+ status("EventVideo180 TikTok lần " .. tostring(round) .. " đang chạy")
 
  pcall(app.quit, "com.ss.iphone.ugc.Ame")
  pcall(app.quit, "com.apple.mobilesafari")
