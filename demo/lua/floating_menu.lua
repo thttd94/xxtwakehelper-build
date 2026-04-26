@@ -123,7 +123,7 @@ local top_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
-#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;color:rgb(17,24,39);border-radius:10px;font-size:12px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
+#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;color:rgb(17,24,39);border-radius:10px;font-size:16px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
 </style>
 <script>
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
@@ -148,7 +148,7 @@ local current_menu_y = MENU_Y
 
 local function show_menu(height)
   webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
-  webview.show({ id = 2, html = top_html, x = 161, y = 1, width = 623, height = 25, alpha = 1.0, corner_radius = 10, opaque = false, can_drag = false, ignores_hit = true })
+  webview.show({ id = 2, html = top_html, x = 1, y = 1, width = 783, height = 35, alpha = 1.0, corner_radius = 10, opaque = false, can_drag = false, ignores_hit = true })
 end
 
 local current_front_app_text = 'APP ?'
