@@ -17,10 +17,10 @@ local side_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-#dock{width:100%;height:100%;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:flex-start;padding:12px 8px}
-#actions{width:100%;display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
-.badge{width:96px;min-height:44px;border-radius:22px;background:rgba(15,23,42,.92);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24)}
-.btn{width:58px;height:58px;border:0;border-radius:29px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0;flex:0 0 auto}
+#dock{width:100%;height:100%;display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:flex-start;padding:8px 10px}
+#actions{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;justify-content:flex-start;overflow:hidden}
+.badge{width:72px;height:72px;border-radius:20px;background:rgba(15,23,42,.92);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24);flex:0 0 auto}
+.btn{width:62px;height:62px;border:0;border-radius:24px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0;flex:0 0 auto}
 .btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
 .home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}
 .compact #actions{display:none}
@@ -120,7 +120,7 @@ local top_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
-#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.97);color:#111827;border-radius:14px;font-size:18px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
+#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.97);color:#111827;border-radius:10px;font-size:16px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
 </style>
 <script>
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
@@ -134,18 +134,18 @@ window.onload = lockUi;
 </html>
 ]]
 
-local MENU_X = 8
-local MENU_Y = 96
-local MENU_W = 300
-local MENU_H_EXPANDED = 260
-local MENU_H_COMPACT = 90
+local MENU_X = 4
+local MENU_Y = 81
+local MENU_W = 740
+local MENU_H_EXPANDED = 88
+local MENU_H_COMPACT = 88
 
 local current_menu_x = MENU_X
 local current_menu_y = MENU_Y
 
 local function show_menu(height)
   webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
-  webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
+  webview.show({ id = 2, html = top_html, x = 161, y = 1, width = 623, height = 20, alpha = 1.0, corner_radius = 10, opaque = false, can_drag = false, ignores_hit = true })
 end
 
 local current_front_app_text = 'APP ?'
@@ -161,7 +161,7 @@ local function sync_menu_view()
     current_menu_x = tonumber(frame.x) or current_menu_x
     current_menu_y = tonumber(frame.y) or current_menu_y
   end
-  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 28, opaque = false, can_drag = true, ignores_hit = false })
   sys.msleep(80)
   webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
   webview.eval(string.format("setMenuLayout(%q);", current_menu_mode or 'other'), 1)
