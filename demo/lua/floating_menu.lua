@@ -137,8 +137,11 @@ local MENU_W = 150
 local MENU_H_EXPANDED = 700
 local MENU_H_COMPACT = 90
 
+local current_menu_x = MENU_X
+local current_menu_y = MENU_Y
+
 local function show_menu(height)
-  webview.show({ id = 1, html = side_html, x = MENU_X, y = MENU_Y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 350, y = 18, width = 360, height = 34, alpha = 1.0, corner_radius = 12, opaque = false, can_drag = false, ignores_hit = true })
 end
 
@@ -150,7 +153,12 @@ local current_home_submenu = ''
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
-  webview.show({ id = 1, html = side_html, x = MENU_X, y = MENU_Y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  local frame = webview.frame and webview.frame(1) or nil
+  if type(frame) == 'table' then
+    current_menu_x = tonumber(frame.x) or current_menu_x
+    current_menu_y = tonumber(frame.y) or current_menu_y
+  end
+  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
   sys.msleep(80)
   webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
   webview.eval(string.format("setMenuLayout(%q);", current_menu_mode or 'other'), 1)
