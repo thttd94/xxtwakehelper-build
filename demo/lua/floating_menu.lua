@@ -145,7 +145,7 @@ local current_menu_y = MENU_Y
 
 local function show_menu(height)
   webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
-  webview.show({ id = 2, html = top_html, x = 161, y = 1, width = 623, height = 20, alpha = 1.0, corner_radius = 10, opaque = false, can_drag = false, ignores_hit = true })
+  webview.show({ id = 2, html = top_html, x = 161, y = 1, width = 623, height = 25, alpha = 1.0, corner_radius = 10, opaque = false, can_drag = false, ignores_hit = true })
 end
 
 local current_front_app_text = 'APP ?'
