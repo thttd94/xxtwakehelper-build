@@ -913,9 +913,9 @@ class XXTouchOnlyDemo(tk.Tk):
         dest_map = {
             'examples': 'lua/examples',
             'scripts': 'lua/scripts',
-            'lib': '/1ferver/lib',
-            'ipa': '/1ferver/ipa',
-            'archives': '/1ferver/archives',
+            'lib': '/var/mobile/Media/1ferver/lib',
+            'ipa': '/var/mobile/Media/1ferver/ipa',
+            'archives': '/var/mobile/Media/1ferver/archives',
         }
         target_dir = dest_map.get(dest_value, 'lua/examples')
         file_payloads = []
