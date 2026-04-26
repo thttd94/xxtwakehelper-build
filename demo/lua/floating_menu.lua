@@ -2,14 +2,11 @@ local sys = require("sys")
 local app = require("app")
 local file = require("file")
 local webview = require("webview")
-local http = require("http")
-local json = require("json")
 
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
 local BID_TIKTOK_LITE = "com.ss.iphone.ugc.tiktok.lite"
 local BID_HOME = "com.apple.springboard"
 local LUA_DIR = "/var/mobile/Media/1ferver/lib/"
-local OPENAPI_BASE = "http://127.0.0.1:46952"
 
 local side_html = [[
 <!doctype html>
@@ -38,7 +35,6 @@ function pickAction(name){ markAction(); window.__xxt_action = name; return fals
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
 window.__xxt_home_submenu = '';
-window.__xxt_current_mode = 'other';
 function setActionLabels(video, claim, p20){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); var c=document.getElementById('btn_20p'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } if(c){ c.textContent=p20 || '20P'; } }
 function setAppButtons(tt, lite){ var a=document.getElementById('btn_tiktok'); var b=document.getElementById('btn_lite'); if(a){ a.textContent=tt; } if(b){ b.textContent=lite; } }
 function setClearLabel(text){ var el=document.getElementById('btn_clear'); if(el){ el.textContent=text; } }
@@ -51,7 +47,6 @@ function setCompactMode(compact){
 }
 function toggleCompact(){ markAction(); setCompactMode(!window.__xxt_compact); window.__xxt_action = window.__xxt_compact ? '__compact_on__' : '__compact_off__'; return false; }
 function setMenuLayout(mode){
-  window.__xxt_current_mode = mode || 'other';
   var isHome = mode === 'home';
   var isTikTok = mode === 'tiktok';
   var isLite = mode === 'lite';
@@ -79,11 +74,7 @@ function setMenuLayout(mode){
 }
 function setHomeSubmenu(name){
   window.__xxt_home_submenu = name || '';
-  if(window.__xxt_current_mode === 'home'){
-    setMenuLayout('home');
-  } else {
-    setMenuLayout(window.__xxt_current_mode || 'other');
-  }
+  setMenuLayout('home');
 }
 function autoHideLoop(){
   setInterval(function(){
@@ -150,10 +141,6 @@ local current_front_app_text = 'APP ?'
 local current_menu_mode = 'other'
 local current_menu_compact = false
 local current_home_submenu = ''
-local current_task_action = ''
-local pending_task_action = ''
-local pending_task_script = ''
-local pending_task_at = 0
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
@@ -207,56 +194,19 @@ local function keep_state(active)
   end
 end
 
-local function post_json(path, payload)
-  local body = json.encode(payload or {})
-  local ok, res, code = pcall(function()
-    return http.request(OPENAPI_BASE .. path, body)
-  end)
-  if not ok then
-    return false, tostring(res)
+local function run_lua_file(path)
+  local code = file.reads(path)
+  if code and #tostring(code) > 0 then
+    local fn, err = load(code)
+    if fn then
+      return pcall(fn)
+    else
+      sys.toast('load lỗi')
+      return false, err
+    end
   end
-  if tonumber(code or 0) ~= 200 and type(code) ~= 'table' then
-    return false, tostring(res)
-  end
-  return true, tostring(res or '')
-end
-
-local function launch_task_script(script_file)
-  local okSelect, resSelect = post_json('/select_script_file', { filename = script_file })
-  if not okSelect then
-    return false, resSelect
-  end
-  local okLaunch, resLaunch = post_json('/launch_script_file', { script_file = script_file })
-  return okLaunch, resLaunch
-end
-
-local function stop_current_task()
-  if current_task_action == '' then
-    return true
-  end
-  local ok, res = post_json('/recycle', {})
-  if ok then
-    current_task_action = ''
-  end
-  return ok, res
-end
-
-local function run_lua_file(action_name, script_file)
-  if current_task_action ~= '' and current_task_action ~= action_name then
-    pending_task_action = action_name or ''
-    pending_task_script = script_file or ''
-    pending_task_at = os.time() + 2
-    set_top_status('Dang dung script cu de chay script moi')
-    sys.toast('Dang dung script cu')
-    return stop_current_task()
-  end
-  local ok, res = launch_task_script(script_file)
-  if ok then
-    current_task_action = action_name or ''
-    return true, res
-  end
-  sys.toast('Chay script loi')
-  return false, res
+  sys.toast('không thấy file')
+  return false
 end
 
 local function unlock_if_needed()
@@ -322,13 +272,13 @@ local function run_video(front_name)
   set_active('video')
   if bid == BID_TIKTOK then
     set_top_status('TikTok: Video đang chạy')
-    local ok = run_lua_file('video', 'Group3_EventVideo180_tiktok.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventVideo180_tiktok.lua')
     sys.msleep(700)
     keep_state('video')
     return ok
   elseif bid == BID_TIKTOK_LITE then
     set_top_status('TikTokLite: Video đang chạy')
-    local ok = run_lua_file('video', 'Group3_EventVideo180_tiktok_lite.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventVideo180_tiktok_lite.lua')
     sys.msleep(700)
     keep_state('video')
     return ok
@@ -346,7 +296,7 @@ local function run_claim(front_name)
   set_active('claim')
   if bid == BID_TIKTOK or bid == BID_TIKTOK_LITE then
     set_top_status((front_name or 'App') .. ': Claim đang chạy')
-    local ok = run_lua_file('claim', 'Claimvideo48.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Claimvideo48.lua')
     sys.msleep(700)
     keep_state('claim')
     return ok
@@ -364,13 +314,13 @@ local function run_20p(front_name)
   set_active('20p')
   if bid == BID_TIKTOK then
     set_top_status('TikTok: 20P đang chạy')
-    local ok = run_lua_file('20p', 'Group3_EventDD20p_tiktok.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventDD20p_tiktok.lua')
     sys.msleep(700)
     keep_state('20p')
     return ok
   elseif bid == BID_TIKTOK_LITE then
     set_top_status('TikTokLite: 20P đang chạy')
-    local ok = run_lua_file('20p', 'Group3_EventDD20p_tiktok_lite.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_EventDD20p_tiktok_lite.lua')
     sys.msleep(700)
     keep_state('20p')
     return ok
@@ -471,18 +421,15 @@ end
 
 local function run_home_nurture()
   unlock_if_needed()
-  set_active('video')
   if current_home_submenu == 'tiktok' then
     set_top_status('HOME TikTok: Nuôi phôi đang chạy')
-    local ok = run_lua_file('video', 'Group3_NuoiPhoi_tiktok.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok.lua')
     sys.msleep(700)
-    keep_state('video')
     return ok
   elseif current_home_submenu == 'lite' then
     set_top_status('HOME Lite: Nuôi phôi đang chạy')
-    local ok = run_lua_file('video', 'Group3_NuoiPhoi_tiktok_lite.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok_lite.lua')
     sys.msleep(700)
-    keep_state('video')
     return ok
   end
   return false
@@ -506,79 +453,10 @@ local function run_home_install()
   return false
 end
 
-local function execute_action(action, ctx)
-  if action == '__compact_on__' then
-    resize_menu(true)
-  elseif action == '__compact_off__' then
-    resize_menu(false)
-  elseif action == 'home' then
-    run_home(ctx.front_name)
-  elseif action == 'tiktok' then
-    if current_menu_mode == 'home' then
-      if current_home_submenu == 'tiktok' then
-        set_home_submenu('')
-      else
-        set_home_submenu('tiktok')
-        webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
-      end
-      set_menu_layout('home')
-    else
-      run_open_tiktok()
-    end
-  elseif action == 'lite' then
-    if current_menu_mode == 'home' then
-      if current_home_submenu == 'lite' then
-        set_home_submenu('')
-      else
-        set_home_submenu('lite')
-        webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
-      end
-      set_menu_layout('home')
-    else
-      run_open_lite()
-    end
-  elseif action == 'video' then
-    if current_menu_mode == 'home' and current_home_submenu ~= '' then
-      run_home_nurture()
-    else
-      run_video(ctx.front_name)
-    end
-  elseif action == 'claim' then
-    if current_menu_mode == 'home' and current_home_submenu ~= '' then
-      run_clear(ctx.front_name)
-    else
-      run_claim(ctx.front_name)
-    end
-  elseif action == 'clear' then
-    if current_menu_mode == 'home' and current_home_submenu ~= '' then
-      run_home_install()
-    else
-      run_clear(ctx.front_name)
-    end
-  elseif action == '20p' then
-    run_20p(ctx.front_name)
-  end
-end
-
 show_menu(MENU_H_EXPANDED)
 local last_action = ''
 local last_mode_refresh = ''
 while true do
-  if pending_task_script ~= '' and os.time() >= pending_task_at then
-    local nextAction = pending_task_action
-    local nextScript = pending_task_script
-    pending_task_action = ''
-    pending_task_script = ''
-    local ok = launch_task_script(nextScript)
-    if ok then
-      current_task_action = nextAction or ''
-      set_top_status('Da chay script moi')
-      sys.toast('Da chay script moi')
-    else
-      set_top_status('Chay script moi loi')
-      sys.toast('Chay script moi loi')
-    end
-  end
   local ctx = get_front_context()
   local mode_key = ctx.front_name .. '|' .. ctx.menu_mode .. '|' .. ctx.video_label .. '|' .. ctx.claim_label .. '|' .. current_home_submenu
   if mode_key ~= last_mode_refresh then
@@ -601,7 +479,57 @@ while true do
   if action ~= '' and action ~= last_action then
     last_action = action
     webview.eval('window.__xxt_action = "";', 1)
-    execute_action(action, ctx)
+    if action == '__compact_on__' then
+      resize_menu(true)
+    elseif action == '__compact_off__' then
+      resize_menu(false)
+    elseif action == 'home' then
+      run_home(ctx.front_name)
+    elseif action == 'tiktok' then
+      if current_menu_mode == 'home' then
+        if current_home_submenu == 'tiktok' then
+          set_home_submenu('')
+        else
+          set_home_submenu('tiktok')
+          webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+        end
+        set_menu_layout('home')
+      else
+        run_open_tiktok()
+      end
+    elseif action == 'lite' then
+      if current_menu_mode == 'home' then
+        if current_home_submenu == 'lite' then
+          set_home_submenu('')
+        else
+          set_home_submenu('lite')
+          webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+        end
+        set_menu_layout('home')
+      else
+        run_open_lite()
+      end
+    elseif action == 'video' then
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        run_home_nurture()
+      else
+        run_video(ctx.front_name)
+      end
+    elseif action == 'claim' then
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        run_clear(ctx.front_name)
+      else
+        run_claim(ctx.front_name)
+      end
+    elseif action == 'clear' then
+      if current_menu_mode == 'home' and current_home_submenu ~= '' then
+        run_home_install()
+      else
+        run_clear(ctx.front_name)
+      end
+    elseif action == '20p' then
+      run_20p(ctx.front_name)
+    end
   elseif action == '' then
     last_action = ''
   end
