@@ -123,7 +123,7 @@ local top_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
-#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;color:rgb(17,24,39);border-radius:10px;font-size:16px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
+#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;color:rgb(255,0,0);border-radius:10px;font-size:16px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
 #status .seg{display:inline-block;margin:0 2px}
 #status .home{color:rgb(242,201,76)}
 #status .tiktok{color:rgb(255,59,48)}
