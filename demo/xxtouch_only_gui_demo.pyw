@@ -853,7 +853,7 @@ class XXTouchOnlyDemo(tk.Tk):
 
         win = tk.Toplevel(self)
         win.title('Chọn thư mục đích SEND FILE')
-        win.geometry('320x190')
+        win.geometry('420x210')
         win.resizable(False, False)
         win.configure(bg='#111827')
         try:
@@ -867,7 +867,6 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(body, text='Gửi file đến đâu?', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
         ttk.Label(body, text='Chọn thư mục đích rồi bấm OK', style='Sub.TLabel').pack(anchor='w', pady=(0, 12))
 
-        dest_var = tk.StringVar(value=str(router.get('send_dest', 'examples') or 'examples'))
         options = [
             ('examples', 'lua/examples'),
             ('scripts', 'lua/scripts'),
@@ -875,14 +874,24 @@ class XXTouchOnlyDemo(tk.Tk):
             ('ipa', '/1ferver/ipa'),
             ('archives', '/1ferver/archives'),
         ]
-        for value, label in options:
-            ttk.Radiobutton(body, text=label, value=value, variable=dest_var).pack(anchor='w', pady=4)
+        option_map = {value: label for value, label in options}
+        reverse_option_map = {label: value for value, label in options}
+        current_key = str(router.get('send_dest', 'examples') or 'examples')
+        current_label = option_map.get(current_key, 'lua/examples')
+
+        pick_row = ttk.Frame(body, style='Card.TFrame')
+        pick_row.pack(fill='x', pady=(0, 6))
+        ttk.Label(pick_row, text='Thư mục đích', style='Sub.TLabel').pack(anchor='w', pady=(0, 6))
+        dest_combo = ttk.Combobox(pick_row, values=[label for _, label in options], state='readonly', width=36)
+        dest_combo.set(current_label)
+        dest_combo.pack(fill='x')
 
         actions = ttk.Frame(body, style='Card.TFrame')
         actions.pack(fill='x', pady=(16, 0))
 
         def do_ok():
-            dest_key = dest_var.get().strip() or 'examples'
+            selected_label = dest_combo.get().strip() or 'lua/examples'
+            dest_key = reverse_option_map.get(selected_label, 'examples')
             router['send_dest'] = dest_key
             save_router_config(self.routers)
             win.destroy()
