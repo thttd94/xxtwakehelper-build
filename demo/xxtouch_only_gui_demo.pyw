@@ -1818,7 +1818,6 @@ class XXTouchOnlyDemo(tk.Tk):
         if not rows:
             self._append_router_log(router, 'UI: không có máy nào được chọn')
             return
-        script_bytes = script_path.read_bytes()
 
         def task(row):
             ip = str(row.get('ip') or '').strip()
@@ -1828,14 +1827,13 @@ class XXTouchOnlyDemo(tk.Tk):
             self._append_router_log(router, f'[{row.get("machine", "?")}] UI: STOP SCRIPT trước khi chạy')
             client.recycle()
             time.sleep(0.8)
-            client.write_file('/var/mobile/Media/1ferver/lua/scripts/floating_menu.lua', script_bytes)
             client.command_spawn('lua /var/mobile/Media/1ferver/lua/scripts/floating_menu.lua')
             row['network'] = 'Online'
             row['xxtouch'] = 'Connected'
             row['updated'] = now_text()
             return row
 
-        self._run_parallel_rows(router, rows, task, 'UI', per_success=lambda row: f'[{row.get("machine", "?")}] UI OK')
+        self._run_parallel_rows(router, rows, task, 'UI', per_success=lambda row: f'[{row.get("machine", "?")}] UI OK (/var/mobile/Media/1ferver/lua/scripts/floating_menu.lua)')
 
     def _run_set_selected_script_for_router(self, router, script_name, script_bytes):
         rows = self._selected_rows(router)
