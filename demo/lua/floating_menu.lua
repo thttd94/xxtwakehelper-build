@@ -124,41 +124,10 @@ local top_html = [[
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;color:rgb(255,0,0);border-radius:10px;font-size:16px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
-#status .seg{display:inline-block;margin:0 2px}
-#status .home{color:rgb(242,201,76)}
-#status .tiktok{color:rgb(255,59,48)}
-#status .lite{color:rgb(52,199,89)}
-#status .ok{color:rgb(52,199,89)}
-#status .err{color:rgb(255,59,48)}
-#status .run{color:rgb(90,200,250)}
-#status .install{color:rgb(175,82,222)}
-#status .clear{color:rgb(255,149,0)}
-#status .normal{color:rgb(17,24,39)}
 </style>
 <script>
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
-function escapeHtml(text){ return String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function colorizeStatus(text){
-  var raw = String(text || '').trim();
-  if(!raw){ return ''; }
-  var tokens = raw.split(/(\s+)/);
-  return tokens.map(function(token){
-    if(/^\s+$/.test(token)){ return token; }
-    var safe = escapeHtml(token);
-    var lower = token.toLowerCase();
-    var cls = 'normal';
-    if(lower === 'home'){ cls = 'home'; }
-    else if(lower.indexOf('tiktok') >= 0){ cls = 'tiktok'; }
-    else if(lower.indexOf('lite') >= 0){ cls = 'lite'; }
-    else if(lower === 'ok' || lower.indexOf('thành') >= 0 || lower.indexOf('xong') >= 0){ cls = 'ok'; }
-    else if(lower.indexOf('lỗi') >= 0 || lower.indexOf('fail') >= 0 || lower.indexOf('error') >= 0){ cls = 'err'; }
-    else if(lower.indexOf('chạy') >= 0 || lower.indexOf('đang') >= 0 || lower.indexOf('run') >= 0){ cls = 'run'; }
-    else if(lower.indexOf('cài') >= 0 || lower.indexOf('install') >= 0){ cls = 'install'; }
-    else if(lower.indexOf('xóa') >= 0 || lower.indexOf('gỡ') >= 0 || lower.indexOf('clear') >= 0){ cls = 'clear'; }
-    return '<span class="seg ' + cls + '">' + safe + '</span>';
-  }).join('');
-}
-function setTopStatus(text){ var el=document.getElementById('status'); if(el){ el.innerHTML=colorizeStatus(text); } }
+function setTopStatus(text){ var el=document.getElementById('status'); if(el){ el.textContent=String(text || ''); } }
 window.onload = lockUi;
 </script>
 </head>
