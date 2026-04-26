@@ -234,7 +234,7 @@ class XXTouchOnlyDemo(tk.Tk):
             ('STOP SCRIPT', lambda r=router: self._run_background(r, self._stop_scripts_for_router)),
             ('HOME', lambda r=router: self._run_background(r, self._run_home_for_router)),
             ('LOCK HOME', lambda r=router: self._run_background(r, self._run_lock_home_for_router)),
-            ('CLEAR APP', lambda r=router: self._run_background(r, self._run_clear_app_for_router)),
+            ('GỠ APP RÁC', lambda r=router: self._run_background(r, self._run_clear_app_for_router)),
             ('CHỌN FILE', lambda r=router: self._choose_files_for_router(r)),
             ('SEND FILE', lambda r=router: self._open_send_file_dest_popup(r)),
         ]
