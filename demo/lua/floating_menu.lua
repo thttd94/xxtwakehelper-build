@@ -22,7 +22,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overf
 .badge{width:72px;height:72px;border-radius:20px;background:rgba(15,23,42,.92);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24);flex:0 0 auto}
 .btn{width:62px;height:62px;border:0;border-radius:24px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0;flex:0 0 auto}
 .btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
-.home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}
+.home{background:#2f80ed}.video{background:#ff3b30}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}.home-tiktok{background:#f2c94c;color:#111827}
 .compact #actions{display:none}
 .compact #dock{justify-content:flex-start}
 .hidden{display:none!important}
@@ -68,7 +68,10 @@ function setMenuLayout(mode){
   var btn20p = document.getElementById('btn_20p');
 
   if(btnHome){ btnHome.classList.toggle('hidden', !showHomeButtons); }
-  if(btnTikTok){ btnTikTok.classList.toggle('hidden', !showTikTokMain); }
+  if(btnTikTok){
+    btnTikTok.classList.toggle('hidden', !showTikTokMain);
+    btnTikTok.classList.toggle('home-tiktok', isHome);
+  }
   if(btnLite){ btnLite.classList.toggle('hidden', !showLiteMain); }
   if(btnVideo){ btnVideo.classList.toggle('hidden', !showActionButtons); }
   if(btnClaim){ btnClaim.classList.toggle('hidden', !showActionButtons); }
