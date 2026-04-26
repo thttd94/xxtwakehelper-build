@@ -35,6 +35,7 @@ function pickAction(name){ markAction(); window.__xxt_action = name; return fals
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
 function setFrontApp(name){ var el=document.getElementById('frontapp'); if(el){ el.textContent=name; } }
 window.__xxt_home_submenu = '';
+window.__xxt_current_mode = 'other';
 function setActionLabels(video, claim, p20){ var a=document.getElementById('btn_video'); var b=document.getElementById('btn_claim'); var c=document.getElementById('btn_20p'); if(a){ a.textContent=video; } if(b){ b.textContent=claim; } if(c){ c.textContent=p20 || '20P'; } }
 function setAppButtons(tt, lite){ var a=document.getElementById('btn_tiktok'); var b=document.getElementById('btn_lite'); if(a){ a.textContent=tt; } if(b){ b.textContent=lite; } }
 function setClearLabel(text){ var el=document.getElementById('btn_clear'); if(el){ el.textContent=text; } }
@@ -47,6 +48,7 @@ function setCompactMode(compact){
 }
 function toggleCompact(){ markAction(); setCompactMode(!window.__xxt_compact); window.__xxt_action = window.__xxt_compact ? '__compact_on__' : '__compact_off__'; return false; }
 function setMenuLayout(mode){
+  window.__xxt_current_mode = mode || 'other';
   var isHome = mode === 'home';
   var isTikTok = mode === 'tiktok';
   var isLite = mode === 'lite';
@@ -74,7 +76,11 @@ function setMenuLayout(mode){
 }
 function setHomeSubmenu(name){
   window.__xxt_home_submenu = name || '';
-  setMenuLayout('home');
+  if(window.__xxt_current_mode === 'home'){
+    setMenuLayout('home');
+  } else {
+    setMenuLayout(window.__xxt_current_mode || 'other');
+  }
 }
 function autoHideLoop(){
   setInterval(function(){
@@ -421,15 +427,18 @@ end
 
 local function run_home_nurture()
   unlock_if_needed()
+  set_active('video')
   if current_home_submenu == 'tiktok' then
     set_top_status('HOME TikTok: Nuôi phôi đang chạy')
     local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok.lua')
     sys.msleep(700)
+    keep_state('video')
     return ok
   elseif current_home_submenu == 'lite' then
     set_top_status('HOME Lite: Nuôi phôi đang chạy')
     local ok = run_lua_file(LUA_DIR .. 'Group3_NuoiPhoi_tiktok_lite.lua')
     sys.msleep(700)
+    keep_state('video')
     return ok
   end
   return false
@@ -451,6 +460,60 @@ local function run_home_install()
     return true
   end
   return false
+end
+
+local function execute_action(action, ctx)
+  if action == '__compact_on__' then
+    resize_menu(true)
+  elseif action == '__compact_off__' then
+    resize_menu(false)
+  elseif action == 'home' then
+    run_home(ctx.front_name)
+  elseif action == 'tiktok' then
+    if current_menu_mode == 'home' then
+      if current_home_submenu == 'tiktok' then
+        set_home_submenu('')
+      else
+        set_home_submenu('tiktok')
+        webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+      end
+      set_menu_layout('home')
+    else
+      run_open_tiktok()
+    end
+  elseif action == 'lite' then
+    if current_menu_mode == 'home' then
+      if current_home_submenu == 'lite' then
+        set_home_submenu('')
+      else
+        set_home_submenu('lite')
+        webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
+      end
+      set_menu_layout('home')
+    else
+      run_open_lite()
+    end
+  elseif action == 'video' then
+    if current_menu_mode == 'home' and current_home_submenu ~= '' then
+      run_home_nurture()
+    else
+      run_video(ctx.front_name)
+    end
+  elseif action == 'claim' then
+    if current_menu_mode == 'home' and current_home_submenu ~= '' then
+      run_clear(ctx.front_name)
+    else
+      run_claim(ctx.front_name)
+    end
+  elseif action == 'clear' then
+    if current_menu_mode == 'home' and current_home_submenu ~= '' then
+      run_home_install()
+    else
+      run_clear(ctx.front_name)
+    end
+  elseif action == '20p' then
+    run_20p(ctx.front_name)
+  end
 end
 
 show_menu(MENU_H_EXPANDED)
@@ -479,57 +542,7 @@ while true do
   if action ~= '' and action ~= last_action then
     last_action = action
     webview.eval('window.__xxt_action = "";', 1)
-    if action == '__compact_on__' then
-      resize_menu(true)
-    elseif action == '__compact_off__' then
-      resize_menu(false)
-    elseif action == 'home' then
-      run_home(ctx.front_name)
-    elseif action == 'tiktok' then
-      if current_menu_mode == 'home' then
-        if current_home_submenu == 'tiktok' then
-          set_home_submenu('')
-        else
-          set_home_submenu('tiktok')
-          webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
-        end
-        set_menu_layout('home')
-      else
-        run_open_tiktok()
-      end
-    elseif action == 'lite' then
-      if current_menu_mode == 'home' then
-        if current_home_submenu == 'lite' then
-          set_home_submenu('')
-        else
-          set_home_submenu('lite')
-          webview.eval("setHomeSubmenuLabels('NUOI PHOI', 'XOA APP', 'TAI APP');", 1)
-        end
-        set_menu_layout('home')
-      else
-        run_open_lite()
-      end
-    elseif action == 'video' then
-      if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        run_home_nurture()
-      else
-        run_video(ctx.front_name)
-      end
-    elseif action == 'claim' then
-      if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        run_clear(ctx.front_name)
-      else
-        run_claim(ctx.front_name)
-      end
-    elseif action == 'clear' then
-      if current_menu_mode == 'home' and current_home_submenu ~= '' then
-        run_home_install()
-      else
-        run_clear(ctx.front_name)
-      end
-    elseif action == '20p' then
-      run_20p(ctx.front_name)
-    end
+    execute_action(action, ctx)
   elseif action == '' then
     last_action = ''
   end
