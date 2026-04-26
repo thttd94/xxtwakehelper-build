@@ -1819,21 +1819,37 @@ class XXTouchOnlyDemo(tk.Tk):
             self._append_router_log(router, 'UI: không có máy nào được chọn')
             return
 
+        remote_path = '/var/mobile/Media/1ferver/lua/scripts/floating_menu.lua'
+
         def task(row):
             ip = str(row.get('ip') or '').strip()
             if not ip:
                 raise XXTouchOpenAPIError('Thiếu IP')
-            client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=12)
+            client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=8)
             self._append_router_log(router, f'[{row.get("machine", "?")}] UI: STOP SCRIPT trước khi chạy')
             client.recycle()
             time.sleep(0.8)
-            client.command_spawn('lua /var/mobile/Media/1ferver/lua/scripts/floating_menu.lua')
+            try:
+                select_resp = client._post_json('/select_script_file', {'filename': remote_path})
+                conf = client._post_json('/get_selected_script_file', {})
+                launch_resp = client._post_json('/launch_script_file', {'filename': remote_path})
+            except Exception as e:
+                raise XXTouchOpenAPIError(f'Không chạy được floating_menu.lua: {e}')
+            conf_data = conf.get('data', conf) if isinstance(conf, dict) else {}
+            active_script = str(conf_data.get('filename') or '').strip()
+            if active_script not in ('floating_menu.lua', remote_path):
+                details = select_resp.get('message') if isinstance(select_resp, dict) else select_resp
+                raise XXTouchOpenAPIError(f'Set selected script chưa ăn, current={active_script or "<trống>"}, select={details}')
+            launch_data = launch_resp.get('data', launch_resp) if isinstance(launch_resp, dict) else launch_resp
+            launch_message = launch_resp.get('message') if isinstance(launch_resp, dict) else ''
+            row['ui_selected_script'] = active_script
+            row['ui_launch_result'] = str(launch_data or launch_message or 'OK')
             row['network'] = 'Online'
             row['xxtouch'] = 'Connected'
             row['updated'] = now_text()
             return row
 
-        self._run_parallel_rows(router, rows, task, 'UI', per_success=lambda row: f'[{row.get("machine", "?")}] UI OK (/var/mobile/Media/1ferver/lua/scripts/floating_menu.lua)')
+        self._run_parallel_rows(router, rows, task, 'UI', per_success=lambda row: f'[{row.get("machine", "?")}] UI OK ({row.get("ui_selected_script", remote_path)})')
 
     def _run_set_selected_script_for_router(self, router, script_name, script_bytes):
         rows = self._selected_rows(router)
