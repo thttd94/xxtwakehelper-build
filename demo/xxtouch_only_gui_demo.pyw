@@ -868,10 +868,16 @@ class XXTouchOnlyDemo(tk.Tk):
         body = ttk.Frame(win, style='Card.TFrame', padding=16)
         body.pack(fill='both', expand=True)
         ttk.Label(body, text='Gửi file đến đâu?', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
-        ttk.Label(body, text='Chọn 1 thư mục trong lua rồi bấm OK', style='Sub.TLabel').pack(anchor='w', pady=(0, 12))
+        ttk.Label(body, text='Chọn thư mục đích rồi bấm OK', style='Sub.TLabel').pack(anchor='w', pady=(0, 12))
 
         dest_var = tk.StringVar(value=str(router.get('send_dest', 'examples') or 'examples'))
-        options = [('examples', 'lua/examples'), ('scripts', 'lua/scripts')]
+        options = [
+            ('examples', 'lua/examples'),
+            ('scripts', 'lua/scripts'),
+            ('lib', '/1ferver/lib'),
+            ('ipa', '/1ferver/ipa'),
+            ('archives', '/1ferver/archives'),
+        ]
         for value, label in options:
             ttk.Radiobutton(body, text=label, value=value, variable=dest_var).pack(anchor='w', pady=4)
 
@@ -897,8 +903,15 @@ class XXTouchOnlyDemo(tk.Tk):
         if not rows:
             self._append_router_log(router, 'Không có máy đích nào được chọn')
             return
-        folder = 'scripts' if str(dest_key or router.get('send_dest', 'examples')).strip().lower() == 'scripts' else 'examples'
-        target_dir = f'lua/{folder}'
+        dest_value = str(dest_key or router.get('send_dest', 'examples')).strip().lower()
+        dest_map = {
+            'examples': 'lua/examples',
+            'scripts': 'lua/scripts',
+            'lib': '/1ferver/lib',
+            'ipa': '/1ferver/ipa',
+            'archives': '/1ferver/archives',
+        }
+        target_dir = dest_map.get(dest_value, 'lua/examples')
         file_payloads = []
         for item in files:
             p = Path(item['path'])
