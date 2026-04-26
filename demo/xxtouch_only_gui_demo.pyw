@@ -231,8 +231,6 @@ class XXTouchOnlyDemo(tk.Tk):
         primary_row = ttk.Frame(box, style='Card.TFrame')
         primary_row.pack(fill='x', pady=(0, 8))
         primary_specs = [
-            ('SCAN', lambda r=router: self._run_background(r, self._scan_router)),
-            ('REBOOT', lambda r=router: self._run_background(r, lambda rr: self._simple_router_action(rr, 'reboot2', 'Đã gửi lệnh reboot'))),
             ('STOP SCRIPT', lambda r=router: self._run_background(r, self._stop_scripts_for_router)),
             ('HOME', lambda r=router: self._run_background(r, self._run_home_for_router)),
             ('LOCK HOME', lambda r=router: self._run_background(r, self._run_lock_home_for_router)),
@@ -243,8 +241,7 @@ class XXTouchOnlyDemo(tk.Tk):
         for text, cmd in primary_specs:
             ttk.Button(primary_row, text=text, command=cmd).pack(side='left', padx=(0, 6))
 
-        ttk.Button(primary_row, text='TXT', command=lambda r=router: self._open_txt_lines_popup(r)).pack(side='left', padx=(8, 6))
-        ttk.Button(primary_row, text='MORE', command=lambda r=router: self._open_more_popup(r)).pack(side='left', padx=(0, 6))
+        ttk.Button(primary_row, text='MORE', command=lambda r=router: self._open_more_popup(r)).pack(side='left', padx=(8, 6))
 
         default_remote = 'all'
         rows = router.get('rows', [])
@@ -1274,7 +1271,7 @@ class XXTouchOnlyDemo(tk.Tk):
     def _open_more_popup(self, router):
         win = tk.Toplevel(self)
         win.title(f'More - {router.get("name", "")}')
-        win.geometry('340x180')
+        win.geometry('360x280')
         win.resizable(False, False)
         win.configure(bg='#111827')
         try:
@@ -1285,9 +1282,12 @@ class XXTouchOnlyDemo(tk.Tk):
 
         body = ttk.Frame(win, style='Card.TFrame', padding=16)
         body.pack(fill='both', expand=True)
-        ttk.Label(body, text='Chức năng ít dùng', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
-        ttk.Label(body, text='Các nút phụ nằm riêng để giao diện chính gọn hơn', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
-        ttk.Button(body, text='Select Script', command=lambda: (win.destroy(), self._open_select_script_popup(router))).pack(anchor='w')
+        ttk.Label(body, text='Chức năng mở rộng', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
+        ttk.Label(body, text='Các nút phụ được gom vào đây để giao diện chính gọn hơn', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
+        ttk.Button(body, text='SCAN', command=lambda: (win.destroy(), self._run_background(router, self._scan_router))).pack(anchor='w', pady=2)
+        ttk.Button(body, text='REBOOT', command=lambda: (win.destroy(), self._run_background(router, lambda rr: self._simple_router_action(rr, 'reboot2', 'Đã gửi lệnh reboot')))).pack(anchor='w', pady=2)
+        ttk.Button(body, text='TXT', command=lambda: (win.destroy(), self._open_txt_lines_popup(router))).pack(anchor='w', pady=2)
+        ttk.Button(body, text='Select Script', command=lambda: (win.destroy(), self._open_select_script_popup(router))).pack(anchor='w', pady=2)
         ttk.Button(body, text='Đóng', command=win.destroy).pack(side='right', pady=(18, 0))
 
     def _open_select_script_popup(self, router):
