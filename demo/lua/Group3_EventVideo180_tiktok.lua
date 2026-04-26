@@ -19,6 +19,7 @@ local repeat_count = 3
 local interval_ms = 45 * 60 * 1000
 
 local function status(text)
+ sys.toast(tostring(text or ""), 1)
  return true
 end
 
