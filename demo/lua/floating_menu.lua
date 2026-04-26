@@ -222,7 +222,9 @@ local function post_json(path, payload)
 end
 
 local function launch_task_script(script_file)
-  return post_json('/launch_script_file', { script_file = script_file })
+  local okSelect = post_json('/select_script_file', { filename = script_file, script_file = script_file, path = script_file })
+  local okLaunch, resLaunch = post_json('/launch_script_file', { script_file = script_file, filename = script_file, path = script_file })
+  return okLaunch, resLaunch
 end
 
 local function stop_current_task()
