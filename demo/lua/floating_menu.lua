@@ -126,7 +126,7 @@ window.onload = lockUi;
 </script>
 </head>
 <body>
-<div id="status">TikTok: Video đang chạy</div>
+<div id="status"></div>
 </body>
 </html>
 ]]
@@ -164,7 +164,30 @@ local function resize_menu(compact)
 end
 
 local function set_top_status(text)
-  webview.eval(string.format("setTopStatus(%q);", text or 'TikTok: Video đang chạy'), 2)
+  webview.eval(string.format("setTopStatus(%q);", text or ''), 2)
+end
+
+local original_sys_toast = sys.toast
+local original_nLog = nLog
+
+local function push_status(text)
+  local msg = tostring(text or '')
+  if msg == '' then return end
+  set_top_status(msg)
+end
+
+sys.toast = function(text, ...)
+  push_status(text)
+  if original_sys_toast then
+    return original_sys_toast(text, ...)
+  end
+end
+
+nLog = function(text, ...)
+  push_status(text)
+  if original_nLog then
+    return original_nLog(text, ...)
+  end
 end
 
 local function set_active(active)
@@ -517,6 +540,7 @@ local function execute_action(action, ctx)
 end
 
 show_menu(MENU_H_EXPANDED)
+set_top_status('')
 local last_action = ''
 local last_mode_refresh = ''
 while true do
