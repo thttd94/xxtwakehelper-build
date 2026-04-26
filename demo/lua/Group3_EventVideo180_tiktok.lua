@@ -18,6 +18,21 @@ local links = {
 local repeat_count = 3
 local interval_ms = 45 * 60 * 1000
 
+local function wait_countdown(ms, label)
+ local remain = ms
+ local lastShown = -1
+ while remain > 0 do
+  local sec = math.ceil(remain / 1000)
+  if sec ~= lastShown then
+   sys.toast((label or "Chờ lần tiếp theo") .. " " .. tostring(sec) .. "s")
+   lastShown = sec
+  end
+  local step = remain < 1000 and remain or 1000
+  sys.msleep(step)
+  remain = remain - step
+ end
+end
+
 math.randomseed(os.time())
 math.random()
 math.random()
@@ -41,8 +56,7 @@ end
 for i = 1, repeat_count do
  run_once(i)
  if i < repeat_count then
-  sys.toast("Chờ 45 phút để chạy lần tiếp theo")
-  sys.msleep(interval_ms)
+  wait_countdown(interval_ms, "Chờ lần tiếp theo")
  end
 end
 
