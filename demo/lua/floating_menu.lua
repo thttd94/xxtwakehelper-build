@@ -560,6 +560,9 @@ while true do
     if ctx.menu_mode == 'home' then
       set_home_submenu(current_home_submenu)
     end
+    if current_menu_compact then
+      resize_menu(true)
+    end
   end
 
   local action = tostring(webview.eval('window.__xxt_action || "";', 1) or '')
