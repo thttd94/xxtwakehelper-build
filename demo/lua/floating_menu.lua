@@ -222,8 +222,11 @@ local function post_json(path, payload)
 end
 
 local function launch_task_script(script_file)
-  local okSelect = post_json('/select_script_file', { filename = script_file, script_file = script_file, path = script_file })
-  local okLaunch, resLaunch = post_json('/launch_script_file', { script_file = script_file, filename = script_file, path = script_file })
+  local okSelect, resSelect = post_json('/select_script_file', { filename = script_file })
+  if not okSelect then
+    return false, resSelect
+  end
+  local okLaunch, resLaunch = post_json('/launch_script_file', { script_file = script_file })
   return okLaunch, resLaunch
 end
 
