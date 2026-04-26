@@ -136,8 +136,8 @@ window.onload = lockUi;
 
 local MENU_X = 8
 local MENU_Y = 96
-local MENU_W = 150
-local MENU_H_EXPANDED = 700
+local MENU_W = 300
+local MENU_H_EXPANDED = 260
 local MENU_H_COMPACT = 90
 
 local current_menu_x = MENU_X
