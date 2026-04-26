@@ -1648,7 +1648,7 @@ class XXTouchOnlyDemo(tk.Tk):
         return 'key = require("key")\nkey.press(0x0C, 48)\nprint("POWER_OK")\n'
 
     def _clear_app_command(self):
-        return 'device = require("device")\nsys = require("sys")\napp = require("app")\n\nwhile (device.is_screen_locked()) do\n device.unlock_screen()\n sys.msleep(1000)\nend\n\nlocal ids = {\n "com.apple.mobilesafari",\n "com.apple.Preferences",\n "com.apple.AppStore",\n "com.ss.iphone.ugc.Ame",\n "com.ss.iphone.ugc.tiktok.lite",\n "com.apple.DocumentsApp",\n "com.apple.camera",\n "com.apple.mobiletimer",\n "com.tigisoftware.Filza",\n "com.tigisoftware.ADManager",\n "com.apple.findmy",\n "com.apple.Health",\n "com.apple.MobileSMS",\n "com.apple.mobilenotes",\n "com.apple.mobilephone",\n "com.apple.mobileslideshow",\n "com.apple.shortcuts",\n "com.apple.tips",\n "com.opa334.TrollStore",\n "ch.xxtou.XXTExplorer"\n}\n\nfor i = 1, #ids do\n pcall(app.quit, ids[i])\n sys.msleep(300)\nend\n\nsys.toast("Đã đóng ứng dụng")\n'
+        return 'device = require("device")\nsys = require("sys")\napp = require("app")\n\nwhile (device.is_screen_locked()) do\n device.unlock_screen()\n sys.msleep(1000)\nend\n\nlocal ids = {\n "com.apple.mobilesafari",\n "com.apple.Preferences",\n "com.apple.AppStore",\n "com.ss.iphone.ugc.Ame",\n "com.ss.iphone.ugc.tiktok.lite",\n "com.apple.DocumentsApp",\n "com.apple.camera",\n "com.apple.mobiletimer",\n "com.tigisoftware.Filza",\n "com.tigisoftware.ADManager",\n "com.apple.findmy",\n "com.apple.Health",\n "com.apple.MobileSMS",\n "com.apple.mobilenotes",\n "com.apple.mobilephone",\n "com.apple.mobileslideshow",\n "com.apple.shortcuts",\n "com.apple.tips",\n "com.opa334.TrollStore",\n "ch.xxtou.XXTExplorer"\n}\n\nlocal removed = 0\nfor i = 1, #ids do\n local ok = pcall(app.uninstall, ids[i])\n if ok then\n  removed = removed + 1\n end\n sys.msleep(500)\nend\n\nsys.toast("Đã gỡ " .. tostring(removed) .. " ứng dụng")\n'
 
     def _remove_tiktok_lite_command(self):
         return 'device = require("device")\nsys = require("sys")\napp = require("app")\n\nwhile (device.is_screen_locked()) do\n device.unlock_screen()\n sys.msleep(1000)\nend\n\nlocal ok = pcall(app.uninstall, "com.ss.iphone.ugc.tiktok.lite")\nsys.toast(ok and "Gỡ Tiktok Lite Thành Công" or "Gỡ Tiktok Lite Thất Bại")\n'
@@ -1759,22 +1759,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self._run_parallel_rows(router, rows, task, 'LOCK HOME', per_success=lambda row: f'[{row.get("machine", "?")}] LOCK HOME OK')
 
     def _run_clear_app_for_router(self, router):
-        rows = self._selected_rows(router)
-        command = self._clear_app_command()
-
-        def task(row):
-            ip = str(row.get('ip') or '').strip()
-            if not ip:
-                raise XXTouchOpenAPIError('Thiếu IP')
-            client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=6)
-            self._try_recycle_before_spawn(client)
-            client.spawn(command)
-            row['network'] = 'Online'
-            row['xxtouch'] = 'Connected'
-            row['updated'] = now_text()
-            return row
-
-        self._run_parallel_rows(router, rows, task, 'CLEAR APP', per_success=lambda row: f'[{row.get("machine", "?")}] CLEAR APP OK')
+        self._run_spawn_command_for_router(router, self._clear_app_command(), 'CLEAR APP')
 
     def _run_remove_tiktok_lite_for_router(self, router):
         self._run_spawn_command_for_router(router, self._remove_tiktok_lite_command(), 'GỠ TIKTOK LITE')
