@@ -18,11 +18,12 @@ local side_html = [[
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 #dock{width:100%;height:100%;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:flex-start;padding:12px 8px}
+#actions{width:100%;display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
 .badge{width:96px;min-height:44px;border-radius:22px;background:rgba(15,23,42,.92);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24)}
-.btn{width:58px;height:58px;border:0;border-radius:29px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0}
+.btn{width:58px;height:58px;border:0;border-radius:29px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0;flex:0 0 auto}
 .btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
 .home{background:#2f80ed}.video{background:#e74c3c}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}
-.compact .action-btn{display:none}
+.compact #actions{display:none}
 .compact #dock{justify-content:flex-start}
 .hidden{display:none!important}
 </style>
@@ -96,13 +97,15 @@ window.onload = function(){ lockUi(); setCompactMode(false); setMenuLayout('othe
 <body>
 <div id="dock">
   <button class="badge" id="frontapp" onclick="return toggleCompact()">APP ?</button>
-  <button class="btn home action-btn hidden" id="btn_home" onclick="return pickAction('home')">HOME</button>
-  <button class="btn app action-btn hidden" id="btn_tiktok" onclick="return pickAction('tiktok')">TIKTOK</button>
-  <button class="btn app action-btn hidden" id="btn_lite" onclick="return pickAction('lite')">LITE</button>
-  <button class="btn video action-btn hidden" id="btn_video" onclick="return pickAction('video')">VIDEO</button>
-  <button class="btn claim action-btn hidden" id="btn_claim" onclick="return pickAction('claim')">CLAIM</button>
-  <button class="btn p20 action-btn hidden" id="btn_20p" onclick="return pickAction('20p')">20P</button>
-  <button class="btn clear action-btn" id="btn_clear" onclick="return pickAction('clear')">CLEAR</button>
+  <div id="actions">
+    <button class="btn home action-btn hidden" id="btn_home" onclick="return pickAction('home')">HOME</button>
+    <button class="btn app action-btn hidden" id="btn_tiktok" onclick="return pickAction('tiktok')">TIKTOK</button>
+    <button class="btn app action-btn hidden" id="btn_lite" onclick="return pickAction('lite')">LITE</button>
+    <button class="btn video action-btn hidden" id="btn_video" onclick="return pickAction('video')">VIDEO</button>
+    <button class="btn claim action-btn hidden" id="btn_claim" onclick="return pickAction('claim')">CLAIM</button>
+    <button class="btn p20 action-btn hidden" id="btn_20p" onclick="return pickAction('20p')">20P</button>
+    <button class="btn clear action-btn" id="btn_clear" onclick="return pickAction('clear')">CLEAR</button>
+  </div>
 </div>
 </body>
 </html>
