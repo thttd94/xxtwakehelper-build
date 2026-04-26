@@ -123,7 +123,7 @@ local top_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
-#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.97);color:#111827;border-radius:10px;font-size:16px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
+#status{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.97);color:rgb(17,24,39);border-radius:10px;font-size:12px;font-weight:700;padding:0 14px;box-sizing:border-box;text-align:center;white-space:nowrap;overflow:hidden}
 </style>
 <script>
 function lockUi(){ document.addEventListener('selectstart', function(e){ e.preventDefault(); }); document.addEventListener('contextmenu', function(e){ e.preventDefault(); }); }
