@@ -74,7 +74,7 @@ local function run_once(round)
  sys.msleep(60000)
  status("Vuốt lên xem video kế tiếp")
  swipe_vertical(1080, 260)
- sys.msleep(1200)
+ sys.msleep(10000)
  status("Vuốt xuống quay về video trước đó")
  swipe_vertical(320, 1120)
 end
