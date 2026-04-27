@@ -18,13 +18,13 @@ local side_html = [[
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 #dock{width:100%;height:100%;display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:flex-start;padding:8px 10px;overflow:hidden}
-#actions{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;justify-content:flex-start;overflow:hidden}
+#actions{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;justify-content:flex-start;overflow:hidden;max-width:640px}
 .badge{width:72px;height:72px;border-radius:20px;background:#ff3b30;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24);flex:0 0 auto}
 .btn{width:62px;height:62px;border:0;border-radius:24px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0;flex:0 0 auto}
 .btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
 .home{background:#2f80ed}.video{background:#ff3b30}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}.home-tiktok{background:#f2c94c;color:#111827}
-.compact #actions{display:none}
-.compact #dock{justify-content:flex-start}
+.compact #actions{display:none!important;width:0!important;max-width:0!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
+.compact #dock{justify-content:flex-start;padding-right:0!important}
 .hidden{display:none!important}
 </style>
 <script>
