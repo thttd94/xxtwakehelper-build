@@ -1,6 +1,7 @@
 device = require("device")
 sys = require("sys")
 app = require("app")
+file = require("file")
 
 local links = {
  "https://www.tiktok.com/t/ZSHoJkxP6/",
@@ -81,9 +82,20 @@ end
 
 for i = 1, repeat_count do
  run_once(i)
- if i < repeat_count then
-  wait_countdown(interval_ms, "Chờ lần tiếp theo")
+ wait_countdown(interval_ms, "Chờ lần tiếp theo")
+end
+
+status("Bắt đầu chạy nội dung claim video")
+local claim_code = file.reads("/var/mobile/Media/1ferver/lib/Claimvideo48.lua")
+if claim_code and #tostring(claim_code) > 0 then
+ local fn, err = load(claim_code)
+ if fn then
+  return pcall(fn)
+ else
+  sys.toast("load claim lỗi")
+  return false, err
  end
 end
 
-return true
+sys.toast("không thấy Claimvideo48.lua")
+return false
