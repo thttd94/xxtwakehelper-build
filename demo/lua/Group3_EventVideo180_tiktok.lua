@@ -71,7 +71,7 @@ local function run_once(round)
 
  local pick = links[math.random(1, #links)]
  app.open_url(pick)
- sys.msleep(5000)
+ sys.msleep(60000)
  status("Vuốt lên xem video kế tiếp")
  swipe_vertical(1080, 260)
  sys.msleep(1200)
