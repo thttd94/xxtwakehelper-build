@@ -305,6 +305,8 @@ local function get_front_context()
 end
 
 local function run_home(front_name)
+  resize_menu(true)
+  sys.msleep(300)
   set_active('home')
   set_top_status((front_name or 'App') .. ': Home đang chạy')
   app.run(BID_HOME)
@@ -316,6 +318,8 @@ end
 local function run_video(front_name)
   local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('video')
   if bid == BID_TIKTOK then
     set_top_status('TikTok: Video đang chạy')
@@ -340,6 +344,8 @@ end
 local function run_claim(front_name)
   local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('claim')
   if bid == BID_TIKTOK or bid == BID_TIKTOK_LITE then
     resize_menu(true)
@@ -360,6 +366,8 @@ end
 local function run_20p(front_name)
   local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('20p')
   if bid == BID_TIKTOK then
     set_top_status('TikTok: 20P đang chạy')
@@ -384,6 +392,8 @@ end
 local function run_clear(front_name)
   local bid = tostring(app.front_bid() or '')
   unlock_if_needed()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('clear')
   if current_menu_mode == 'home' and current_home_submenu == 'tiktok' then
     set_top_status('HOME: Xóa app TikTok')
@@ -449,6 +459,8 @@ local function run_clear(front_name)
 end
 
 local function run_open_tiktok()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('tiktok')
   set_top_status('HOME: mở TikTok')
   app.run(BID_TIKTOK)
@@ -459,6 +471,8 @@ local function run_open_tiktok()
 end
 
 local function run_open_lite()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('lite')
   set_top_status('HOME: mở TikTokLite')
   app.run(BID_TIKTOK_LITE)
@@ -470,6 +484,8 @@ end
 
 local function run_home_nurture()
   unlock_if_needed()
+  resize_menu(true)
+  sys.msleep(300)
   set_active('video')
   if current_home_submenu == 'tiktok' then
     set_top_status('HOME TikTok: Nuôi phôi đang chạy')
@@ -489,6 +505,8 @@ end
 
 local function run_home_install()
   unlock_if_needed()
+  resize_menu(true)
+  sys.msleep(300)
   if current_home_submenu == 'tiktok' then
     set_top_status('HOME TikTok: Tải app đang mở')
     app.open_url('https://apps.apple.com/jp/app/tiktok-%E3%83%86%E3%82%A3%E3%83%83%E3%82%AF%E3%83%88%E3%83%83%E3%82%AF/id1235601864')
