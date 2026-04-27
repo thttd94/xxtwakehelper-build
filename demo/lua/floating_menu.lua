@@ -165,11 +165,16 @@ local function sync_menu_view()
   current_menu_x = MENU_X
   current_menu_y = MENU_Y
   webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = target_w, height = target_h, alpha = 1.0, corner_radius = 28, opaque = false, can_drag = true, ignores_hit = false })
-  sys.msleep(80)
+  sys.msleep(120)
+  webview.eval(string.format("setCompactMode(%s);", current_menu_compact and 'true' or 'false'), 1)
   webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
   webview.eval(string.format("setMenuLayout(%q);", current_menu_mode or 'other'), 1)
   webview.eval(string.format("setHomeSubmenu(%q);", current_home_submenu or ''), 1)
-  webview.eval(string.format("setCompactMode(%s);", current_menu_compact and 'true' or 'false'), 1)
+  if current_menu_compact then
+    webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W_COMPACT, height = MENU_H_COMPACT, alpha = 1.0, corner_radius = 28, opaque = false, can_drag = true, ignores_hit = false })
+    sys.msleep(80)
+    webview.eval("setCompactMode(true);", 1)
+  end
 end
 
 local function resize_menu(compact)
