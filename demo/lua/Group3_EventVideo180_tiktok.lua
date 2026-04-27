@@ -16,7 +16,7 @@ local links = {
 }
 
 local repeat_count = 3
-local interval_ms = 45 * 60 * 1000
+local interval_ms = 60 * 60 * 1000
 
 local function status(text)
  sys.toast(tostring(text or ""), 0)
@@ -42,6 +42,21 @@ math.randomseed(os.time())
 math.random()
 math.random()
 
+local function swipe_vertical(y1, y2)
+ touch.down(1, 375, y1)
+ sys.msleep(120)
+ local current = y1
+ local step = y2 < y1 and -60 or 60
+ while (step < 0 and current > y2) or (step > 0 and current < y2) do
+  current = current + step
+  if step < 0 and current < y2 then current = y2 end
+  if step > 0 and current > y2 then current = y2 end
+  touch.move(1, 375, current)
+  sys.msleep(30)
+ end
+ touch.up(1)
+end
+
 local function run_once(round)
  while (device.is_screen_locked()) do
   device.unlock_screen()
@@ -56,6 +71,12 @@ local function run_once(round)
 
  local pick = links[math.random(1, #links)]
  app.open_url(pick)
+ sys.msleep(5000)
+ status("Vuốt lên xem video kế tiếp")
+ swipe_vertical(1080, 260)
+ sys.msleep(1200)
+ status("Vuốt xuống quay về video trước đó")
+ swipe_vertical(320, 1120)
 end
 
 for i = 1, repeat_count do
