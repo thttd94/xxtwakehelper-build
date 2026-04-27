@@ -342,6 +342,8 @@ local function run_claim(front_name)
   unlock_if_needed()
   set_active('claim')
   if bid == BID_TIKTOK or bid == BID_TIKTOK_LITE then
+    resize_menu(true)
+    sys.msleep(300)
     set_top_status((front_name or 'App') .. ': Claim đang chạy')
     local ok = run_lua_file(LUA_DIR .. 'Claimvideo48.lua')
     sys.msleep(700)
