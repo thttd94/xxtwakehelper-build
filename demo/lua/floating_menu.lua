@@ -17,9 +17,9 @@ local side_html = [[
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-#dock{width:100%;height:100%;display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:flex-start;padding:8px 10px}
+#dock{width:100%;height:100%;display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:flex-start;padding:8px 10px;overflow:hidden}
 #actions{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;justify-content:flex-start;overflow:hidden}
-.badge{width:72px;height:72px;border-radius:20px;background:rgba(15,23,42,.92);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24);flex:0 0 auto}
+.badge{width:72px;height:72px;border-radius:20px;background:#ff3b30;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border:0;box-shadow:0 10px 22px rgba(0,0,0,.24);flex:0 0 auto}
 .btn{width:62px;height:62px;border:0;border-radius:24px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.24);opacity:.96;transition:all .12s ease;outline:none;padding:6px;line-height:1.0;flex:0 0 auto}
 .btn.active{transform:scale(1.04);opacity:1;box-shadow:0 0 0 4px rgba(255,255,255,.22),0 14px 30px rgba(0,0,0,.35)}
 .home{background:#2f80ed}.video{background:#ff3b30}.p20{background:#27ae60}.claim{background:#f2994a}.clear{background:#9b51e0}.app{background:#111827}.home-tiktok{background:#f2c94c;color:#111827}
@@ -137,9 +137,10 @@ window.onload = lockUi;
 </html>
 ]]
 
-local MENU_X = 4
-local MENU_Y = 81
+local MENU_X = 20
+local MENU_Y = 1110
 local MENU_W = 740
+local MENU_W_COMPACT = 92
 local MENU_H_EXPANDED = 88
 local MENU_H_COMPACT = 88
 
@@ -147,7 +148,8 @@ local current_menu_x = MENU_X
 local current_menu_y = MENU_Y
 
 local function show_menu(height)
-  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
+  local width = current_menu_compact and MENU_W_COMPACT or MENU_W
+  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = width, height = height or MENU_H_EXPANDED, alpha = 1.0, corner_radius = 26, opaque = false, can_drag = true, ignores_hit = false })
   webview.show({ id = 2, html = top_html, x = 1, y = 1, width = 783, height = 35, alpha = 1.0, corner_radius = 10, opaque = false, can_drag = false, ignores_hit = true })
 end
 
@@ -159,12 +161,10 @@ local current_home_submenu = ''
 
 local function sync_menu_view()
   local target_h = current_menu_compact and MENU_H_COMPACT or MENU_H_EXPANDED
-  local frame = webview.frame and webview.frame(1) or nil
-  if type(frame) == 'table' then
-    current_menu_x = tonumber(frame.x) or current_menu_x
-    current_menu_y = tonumber(frame.y) or current_menu_y
-  end
-  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = MENU_W, height = target_h, alpha = 1.0, corner_radius = 28, opaque = false, can_drag = true, ignores_hit = false })
+  local target_w = current_menu_compact and MENU_W_COMPACT or MENU_W
+  current_menu_x = MENU_X
+  current_menu_y = MENU_Y
+  webview.show({ id = 1, html = side_html, x = current_menu_x, y = current_menu_y, width = target_w, height = target_h, alpha = 1.0, corner_radius = 28, opaque = false, can_drag = true, ignores_hit = false })
   sys.msleep(80)
   webview.eval(string.format("setFrontApp(%q);", current_front_app_text or 'APP ?'), 1)
   webview.eval(string.format("setMenuLayout(%q);", current_menu_mode or 'other'), 1)
