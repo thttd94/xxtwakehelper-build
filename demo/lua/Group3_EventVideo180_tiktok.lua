@@ -86,7 +86,7 @@ for i = 1, repeat_count do
 end
 
 status("Bắt đầu chạy nội dung claim video")
-local claim_code = file.reads("/var/mobile/Media/1ferver/lib/Claimvideo48.lua")
+local claim_code = file.reads("/var/mobile/Media/1ferver/lib/Group3_ClaimVideo.lua")
 if claim_code and #tostring(claim_code) > 0 then
  local fn, err = load(claim_code)
  if fn then
@@ -97,5 +97,5 @@ if claim_code and #tostring(claim_code) > 0 then
  end
 end
 
-sys.toast("không thấy Claimvideo48.lua")
+sys.toast("không thấy Group3_ClaimVideo.lua")
 return false

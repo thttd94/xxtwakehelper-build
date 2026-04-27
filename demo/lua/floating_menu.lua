@@ -345,7 +345,7 @@ local function run_claim(front_name)
     resize_menu(true)
     sys.msleep(300)
     set_top_status((front_name or 'App') .. ': Claim đang chạy')
-    local ok = run_lua_file(LUA_DIR .. 'Claimvideo48.lua')
+    local ok = run_lua_file(LUA_DIR .. 'Group3_ClaimVideo.lua')
     sys.msleep(700)
     keep_state('claim')
     return ok
