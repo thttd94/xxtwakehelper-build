@@ -80,6 +80,7 @@ def ensure_router_defaults(router):
     router.setdefault('group3_app', 'TikTok Lite')
     router.setdefault('inline_script', 'device = require("device")\nsys = require("sys")\n\nwhile (device.is_screen_locked()) do\n    device.unlock_screen()\n    sys.msleep(1000)\nend\n\nsys.toast("Screen unlocked, script starting")\n')
     router.setdefault('ui_home_expanded', '')
+    router.setdefault('last_failed_action', None)
     return router
 
 
@@ -235,7 +236,9 @@ class XXTouchOnlyDemo(tk.Tk):
             ('HOME', lambda r=router: self._run_background(r, self._run_home_for_router)),
             ('LOCK HOME', lambda r=router: self._run_background(r, self._run_lock_home_for_router)),
             ('GỠ APP RÁC', lambda r=router: self._run_background(r, self._run_clear_app_for_router)),
+            ('RE-ACTION', lambda r=router: self._run_background(r, self._rerun_last_failed_action_for_router)),
             ('CHỌN FILE', lambda r=router: self._choose_files_for_router(r)),
+            ('SYNC EXAMPLES', lambda r=router: self._sync_examples_from_repo_for_router(r)),
             ('SEND FILE', lambda r=router: self._open_send_file_dest_popup(r)),
         ]
         for text, cmd in primary_specs:
@@ -270,8 +273,13 @@ class XXTouchOnlyDemo(tk.Tk):
 
         file_row = ttk.Frame(box, style='Card.TFrame')
         file_row.pack(fill='x')
-        ttk.Label(file_row, text='File đã chọn', style='Sub.TLabel').pack(side='left', padx=(0, 8))
-        ttk.Button(file_row, text='Xem danh sách file', command=lambda r=router: self._open_selected_files_popup(r)).pack(side='left', padx=(0, 8))
+        router['_ui_file_row'] = file_row
+        file_label = ttk.Label(file_row, text='File đã chọn', style='Sub.TLabel')
+        file_label.pack(side='left', padx=(0, 8))
+        router['_ui_file_label'] = file_label
+        view_btn = ttk.Button(file_row, text='Xem danh sách file', command=lambda r=router: self._open_selected_files_popup(r))
+        view_btn.pack(side='left', padx=(0, 8))
+        router['_ui_file_view_btn'] = view_btn
         files_box = tk.Frame(file_row, bg='#ffffff')
         files_box.pack(side='left', fill='x', expand=True)
         router['_ui_files_box'] = files_box
@@ -309,7 +317,7 @@ class XXTouchOnlyDemo(tk.Tk):
         top = ttk.Frame(card, style='Card.TFrame')
         top.pack(fill='x', pady=(0, 10))
         ttk.Label(top, text='Chọn app chạy nhóm 3:', style='Sub.TLabel').pack(side='left')
-        app = ttk.Combobox(top, values=['TikTok Lite', 'TikTok'], width=18, state='readonly')
+        app = ttk.Combobox(top, values=['TikTok Lite', 'TikTok'], width=18, state='readonly', foreground='#000000')
         saved_app = str(router.get('group3_app', 'TikTok Lite')).strip()
         if saved_app not in ['TikTok Lite', 'TikTok']:
             saved_app = 'TikTok Lite'
@@ -766,13 +774,45 @@ class XXTouchOnlyDemo(tk.Tk):
         box = self.router_file_widgets.get(id(router))
         if box is None:
             return
+        file_row = router.get('_ui_file_row')
+        file_label = router.get('_ui_file_label')
+        view_btn = router.get('_ui_file_view_btn')
         for child in box.winfo_children():
             child.destroy()
         names = [item.get('name', '') for item in router.get('selected_files', [])]
+        if not names:
+            if file_label is not None:
+                try:
+                    file_label.pack_forget()
+                except Exception:
+                    pass
+            if view_btn is not None:
+                try:
+                    view_btn.pack_forget()
+                except Exception:
+                    pass
+            try:
+                box.pack_forget()
+            except Exception:
+                pass
+            if file_row is not None:
+                try:
+                    file_row.pack_forget()
+                except Exception:
+                    pass
+            return
+        if file_row is not None and not file_row.winfo_ismapped():
+            file_row.pack(fill='x')
+        if file_label is not None and not file_label.winfo_ismapped():
+            file_label.pack(side='left', padx=(0, 8))
+        if view_btn is not None and not view_btn.winfo_ismapped():
+            view_btn.pack(side='left', padx=(0, 8))
+        if not box.winfo_ismapped():
+            box.pack(side='left', fill='x', expand=True)
         preview = ', '.join(names[:3])
         if len(names) > 3:
             preview += f' ... (+{len(names)-3})'
-        tk.Label(box, text=preview or 'Chưa chọn file', bg='#ffffff', anchor='w').pack(side='left', fill='x', expand=True)
+        tk.Label(box, text=preview, bg='#ffffff', anchor='w').pack(side='left', fill='x', expand=True)
 
     def _remove_selected_file(self, router, path):
         router['selected_files'] = [x for x in router.get('selected_files', []) if x.get('path') != path]
@@ -840,6 +880,22 @@ class XXTouchOnlyDemo(tk.Tk):
         save_router_config(self.routers)
         self._refresh_selected_files(router)
         self._append_router_log(router, f'Đã chọn {added} file mới')
+
+    def _sync_examples_from_repo_for_router(self, router):
+        examples_dir = Path(__file__).resolve().parent.parent / 'examples'
+        if not examples_dir.exists() or not examples_dir.is_dir():
+            self._append_router_log(router, f'SYNC EXAMPLES: không thấy thư mục {examples_dir}')
+            return
+        files = [p for p in examples_dir.iterdir() if p.is_file()]
+        if not files:
+            self._append_router_log(router, 'SYNC EXAMPLES: thư mục examples không có file nào')
+            return
+        router['selected_files'] = [{'name': p.name, 'path': str(p)} for p in files]
+        router['send_dest'] = 'examples'
+        save_router_config(self.routers)
+        self._refresh_selected_files(router)
+        self._append_router_log(router, f'SYNC EXAMPLES: đã nạp {len(files)} file từ repo/examples, chuẩn bị gửi xuống lua/examples')
+        self._send_files_for_router(router, 'examples')
 
     def _open_send_file_dest_popup(self, router):
         files = list(router.get('selected_files', []))
@@ -937,6 +993,9 @@ class XXTouchOnlyDemo(tk.Tk):
             return row
 
         self._run_parallel_rows(router, rows, task, 'SEND FILE', per_success=lambda row: f'[{row.get("machine", "?")}] SEND FILE OK ({len(files)} file -> {target_dir})')
+        router['selected_files'] = []
+        save_router_config(self.routers)
+        self._refresh_selected_files(router)
 
     def _save_router_machine_ui(self, router):
         list_widget = router.get('_ui_list_widget')
@@ -1707,6 +1766,8 @@ class XXTouchOnlyDemo(tk.Tk):
         def worker():
             success = 0
             failed = 0
+            failed_rows = []
+            failed_by_error = {}
             max_workers = min(32, max(1, len(rows)))
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
                 future_map = {pool.submit(task, row): row for row in rows}
@@ -1721,10 +1782,23 @@ class XXTouchOnlyDemo(tk.Tk):
                         failed += 1
                         row['updated'] = now_text()
                         row['network'] = 'Lỗi'
-                        self.after(0, lambda r=row, err=str(e): self._append_router_log(router, f'[{r.get("machine", "?")}] {action_name} lỗi: {err}'))
+                        err = str(e)
+                        machine = str(row.get('machine', '?'))
+                        failed_rows.append(machine)
+                        failed_by_error.setdefault(err, []).append(machine)
+                        self.after(0, lambda r=row, err=err: self._append_router_log(router, f'[{r.get("machine", "?")}] {action_name} lỗi: {err}'))
+            router['last_failed_action'] = None
+            if failed_rows:
+                router['last_failed_action'] = {
+                    'action_name': action_name,
+                    'machines': failed_rows,
+                }
             save_router_config(self.routers)
             self.after(0, lambda: self._refresh_router_devices(router))
             self.after(0, lambda: self._append_router_log(router, f'{action_name}: thành công {success}, lỗi {failed}'))
+            if failed_by_error:
+                for err, machines in failed_by_error.items():
+                    self.after(0, lambda err=err, machines=machines: self._append_router_log(router, f'{err} : {",".join(machines)}'))
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1782,6 +1856,56 @@ class XXTouchOnlyDemo(tk.Tk):
 
     def _run_clear_app_for_router(self, router):
         self._run_spawn_command_for_router(router, self._clear_app_command(), 'CLEAR APP')
+
+    def _rerun_last_failed_action_for_router(self, router):
+        retry = router.get('last_failed_action') or {}
+        action_name = str(retry.get('action_name') or '').strip()
+        machines = [str(x).strip() for x in (retry.get('machines') or []) if str(x).strip()]
+        if not action_name or not machines:
+            self._append_router_log(router, 'RE-ACTION: không có lỗi trước đó để chạy lại')
+            return
+        self._append_router_log(router, f'RE-ACTION: chạy lại {action_name} cho máy lỗi {",".join(machines)}')
+        old_value = str(router.get('ui_list', 'all') or 'all')
+        list_widget = router.get('_ui_list_widget')
+        retry_value = ','.join(machines)
+        try:
+            router['ui_list'] = retry_value
+            router['ui_group'] = retry_value
+            if list_widget is not None:
+                list_widget.delete(0, 'end')
+                list_widget.insert(0, retry_value)
+            action_map = {
+                'STOP SCRIPT': self._stop_scripts_for_router,
+                'HOME': self._run_home_for_router,
+                'LOCK HOME': self._run_lock_home_for_router,
+                'CLEAR APP': self._run_clear_app_for_router,
+                'GỠ TIKTOK LITE': self._run_remove_tiktok_lite_for_router,
+                'GỠ TIKTOK': self._run_remove_tiktok_for_router,
+                'CÀI TIKTOK': self._run_install_tiktok_for_router,
+                'CÀI TIKTOK LITE': self._run_install_tiktok_lite_for_router,
+                'ĐÓNG ỨNG DỤNG': self._run_quit_apps_for_router,
+                'SEND FILE': lambda rr: self._send_files_for_router(rr, rr.get('send_dest', 'examples')),
+                'SCAN': self._scan_router,
+                'UI': lambda rr: self._run_group3_action(rr, 'ui'),
+                'Group3_NuoiPhoi_tiktok.lua': lambda rr: self._run_group3_action(rr, 'nurture'),
+                'Group3_NuoiPhoi_tiktok_lite.lua': lambda rr: self._run_group3_action(rr, 'nurture'),
+                'Group3_EventVideo180_tiktok.lua': lambda rr: self._run_group3_action(rr, 'event_video_180'),
+                'Group3_EventVideo180_tiktok_lite.lua': lambda rr: self._run_group3_action(rr, 'event_video_180'),
+                'Group3_EventDD20p_tiktok.lua': lambda rr: self._run_group3_action(rr, 'event_dd_20p'),
+                'Group3_EventDD20p_tiktok_lite.lua': lambda rr: self._run_group3_action(rr, 'event_dd_20p'),
+                'SELECT SCRIPT': lambda rr: self._append_router_log(rr, 'RE-ACTION: SELECT SCRIPT chưa hỗ trợ chạy lại tự động'),
+            }
+            fn = action_map.get(action_name)
+            if not fn:
+                self._append_router_log(router, f'RE-ACTION: chưa hỗ trợ action {action_name}')
+                return
+            fn(router)
+        finally:
+            router['ui_list'] = old_value
+            router['ui_group'] = old_value
+            if list_widget is not None:
+                list_widget.delete(0, 'end')
+                list_widget.insert(0, old_value)
 
     def _run_remove_tiktok_lite_for_router(self, router):
         self._run_spawn_command_for_router(router, self._remove_tiktok_lite_command(), 'GỠ TIKTOK LITE')
