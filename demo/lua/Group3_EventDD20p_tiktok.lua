@@ -3,6 +3,11 @@ status_bridge.attach({ override_toast = true, override_nlog = true })
 
 screen.init(0)
 
+clear.app_data("com.ss.iphone.ugc.Ame")
+clear.app_data("com.ss.iphone.ugc.tiktok.lite")
+sys.toast("clear tiktok done", 1)
+sys.msleep(1000)
+
 local IMG_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 local CHECK_IMG = IMG_DIR .. "check20p_1.PNG"
 local TAP_IMG = IMG_DIR .. "tap20p.PNG"
