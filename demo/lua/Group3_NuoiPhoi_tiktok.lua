@@ -150,7 +150,7 @@ end
 
 local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 local TIKTOK_BUNDLE = "com.ss.iphone.ugc.Ame"
-local TIKTOK_LITE_BUNDLE = "com.ss.iphone.ugc.tiktok.lite"
+local TIKTOK_LITE_BUNDLE = "com.zhiliaoapp.musicallylite"
 local APPMANAGER_BUNDLE = "com.tigisoftware.ADManager"
 local POPUP_1_CHECK = { RES_DIR .. "Popup_1_check1.png" }
 local POPUP_1_TAP = RES_DIR .. "Popup_1_tap.png"

@@ -3,11 +3,6 @@ sys = require("sys")
 app = require("app")
 file = require("file")
 
-clear.app_data("com.ss.iphone.ugc.Ame")
-clear.app_data("com.ss.iphone.ugc.tiktok.lite")
-sys.toast("clear tiktok done", 1)
-sys.msleep(1000)
-
 local links = {
  "https://www.tiktok.com/t/ZSHoJkxP6/",
  "https://www.tiktok.com/t/ZSHoJvPdS",
