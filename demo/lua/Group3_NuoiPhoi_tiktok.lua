@@ -1,5 +1,10 @@
 screen.init(0)
 
+clear.app_data("com.ss.iphone.ugc.Ame")
+clear.app_data("com.ss.iphone.ugc.tiktok.lite")
+sys.toast("clear tiktok done", 1)
+sys.msleep(1000)
+
 local SCRIPT_VERSION = "3.5"
 local STAGE3_TIMEOUT_SEC = 3600
 local stage3_started_at = nil
