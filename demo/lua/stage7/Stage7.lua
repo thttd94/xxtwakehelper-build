@@ -296,6 +296,7 @@ local function runGroup3AppManagerBackupFlow()
  countdown("Sau tap xác nhận backup", 1)
  waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 526, 512, 1171)
  waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 526, 512, 1171)
+ countdown("Backup xong, chờ tiếp", 30)
  local tap_ok_start = os.time()
  while os.time() - tap_ok_start < 5 do
   touch.tap(365, 1284)
