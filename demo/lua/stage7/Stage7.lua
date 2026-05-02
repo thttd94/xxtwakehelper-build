@@ -5,6 +5,7 @@ local sys = require("sys")
 
 local SCRIPT_VERSION = "STAGE7_TIKTOK_V1"
 local TIKTOK_BUNDLE = "com.ss.iphone.ugc.Ame"
+local APPMANAGER_BUNDLE = "com.tigisoftware.ADManager"
 local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 
 local ADDACC_IMG = RES_DIR .. "addacc.png"
@@ -20,6 +21,10 @@ local COUNTT_IMG = RES_DIR .. "countt.png"
 local BIRTHDAY_IMG = RES_DIR .. "birthday.png"
 local BIRTHDAY1_IMG = RES_DIR .. "birthday1.png"
 local CREATNAME_IMG = RES_DIR .. "creatname.png"
+local BACKUPSAPP_IMG = RES_DIR .. "Backupsapp.png"
+local TIKTOKBUP_IMG = RES_DIR .. "tiktokbup.png"
+local SETNAME_IMG = RES_DIR .. "setname.png"
+local PASTE_IMG = RES_DIR .. "paste.png"
 
 local function sleep(ms)
  sys.msleep(ms)
@@ -175,6 +180,36 @@ local function tapLoop60s(x, y)
  end
 end
 
+local function closeAppManager()
+ app.quit(APPMANAGER_BUNDLE)
+ countdown("Đóng AppManager", 2)
+end
+
+local function openAppManager()
+ app.run(APPMANAGER_BUNDLE)
+ countdown("Mở AppManager", 4)
+end
+
+local function runBackupManagerTail()
+ touch.tap(362, 398)
+ countdown("Sau tap 362,398", 2)
+ app.quit(TIKTOK_BUNDLE)
+ countdown("Đóng TikTok", 2)
+ closeAppManager()
+ openAppManager()
+ waitImage(BACKUPSAPP_IMG, 0, "")
+ tapImageCenter(TIKTOKBUP_IMG, 82, 60, "Tìm tiktokbup")
+ countdown("Sau tap tiktokbup", 2)
+ touch.tap(345, 477)
+ countdown("Sau tap 345,477", 2)
+ tapImageCenter(SETNAME_IMG, 82, 60, "Tìm setname")
+ countdown("Sau setname", 3)
+ touch.tap(521, 478)
+ tapImageCenter(PASTE_IMG, 82, 60, "Tìm paste")
+ countdown("Sau paste", 2)
+ touch.tap(527, 574)
+end
+
 local function tapPinkOrSwipeDown()
  local color = screen.get_color(552, 1206)
  if color == 0xfe2c55 then
@@ -235,6 +270,7 @@ local function runStage7()
  touch.tap(591, 819)
  countdown("Sau tap 591,819", 3)
  tapLoop60s(680, 1286)
+ runBackupManagerTail()
 
  sys.toast("Stage 7 hoàn thành", 1)
  return true
