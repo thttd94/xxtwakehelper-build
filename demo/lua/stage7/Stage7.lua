@@ -102,7 +102,7 @@ local function tapImageCenter(img, sim, timeoutSec, label, x1, y1, x2, y2, offse
   if ok then
    countdown("Thấy ảnh, chờ tap", 2)
    touch.tap(x + offsetX, y + offsetY)
-   waitImageDisappear(img, 5, "Đợi ảnh mất", x1, y1, x2, y2)
+   waitImageDisappear(img, 30, "Đợi ảnh mất", x1, y1, x2, y2)
    return true, x, y
   end
   sleep(300)
@@ -160,13 +160,14 @@ local function waitAnyImage(imgList, timeoutSec, label, x1, y1, x2, y2)
  return false, -1, -1, nil
 end
 
-local function tapAnyImageCenter(imgList, timeoutSec, label)
+local function tapAnyImageCenter(imgList, timeoutSec, label, disappearTimeout)
+ disappearTimeout = disappearTimeout or 30
  local ok, x, y, img = waitAnyImage(imgList, timeoutSec, label)
  if ok then
   local cx, cy = imageCenter(img, x, y)
   countdown("Thấy ảnh, chờ tap", 2)
   touch.tap(cx, cy)
-  waitImageDisappear(img, 5, "Đợi ảnh mất")
+  waitImageDisappear(img, disappearTimeout, "Đợi ảnh mất")
   return true, cx, cy, img
  end
  return false, -1, -1, nil
@@ -329,7 +330,7 @@ local function runStage7()
 
  waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "Đợi LogTTT/LogTTT2")
 
- tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg")
+ tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg", 5)
 
  countdown("Trước tap 502,792", 3)
  touch.tap(502, 792)
