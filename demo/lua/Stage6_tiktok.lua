@@ -66,6 +66,14 @@ function findImage(img, sim, x1, y1, x2, y2)
  return false, -1, -1
 end
 
+function imageCenter(imgPath, x, y)
+ local img = image.load_file(imgPath)
+ if not img then return x, y end
+ local w, h = img:size()
+ if not w or not h then return x, y end
+ return math.floor(x + (w / 2)), math.floor(y + (h / 2))
+end
+
 function handleNotNow()
  local ok, x, y = findImage(NOTNOW_IMG, 82, 0, 0, 750, 1334)
  if ok then
@@ -257,7 +265,11 @@ function swipeUpUntilInderstand()
   local ok, x, y = findImage(INDERSTAND_IMG, 82, 0, 0, 750, 1334)
   if ok then
    phase("Thấy inderstand.png")
-   return true, x, y
+   sleep(2000)
+   local cx, cy = imageCenter(INDERSTAND_IMG, x, y)
+   touch.tap(cx, cy)
+   sleep(1000)
+   return true, cx, cy
   end
   swipeUpOnceNormal()
  end
