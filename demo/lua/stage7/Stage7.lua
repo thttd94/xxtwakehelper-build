@@ -9,6 +9,7 @@ local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 
 local ADDACC_IMG = RES_DIR .. "addacc.png"
 local LOGTTT_IMG = RES_DIR .. "LogTTT.png"
+local LOGTTT1_IMG = RES_DIR .. "LogTTT1.png"
 local COUNTWGG_IMG = RES_DIR .. "Countwgg.png"
 local TIKTOKWANT_IMG = RES_DIR .. "tiktokwant.png"
 local CHOOSEAN_IMG = RES_DIR .. "choosean.png"
@@ -69,6 +70,19 @@ local function waitImage(img, timeoutSec, label)
   sleep(500)
  end
  return false, -1, -1
+end
+
+local function waitAnyImage(imgList, timeoutSec, label)
+ local startAt = os.time()
+ while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
+  for i = 1, #imgList do
+   local ok, x, y = findImage(imgList[i], 82, 0, 0, 750, 1334)
+   if ok then return true, x, y, imgList[i] end
+  end
+  if label then toast(label) end
+  sleep(500)
+ end
+ return false, -1, -1, nil
 end
 
 local function swipeUpOnce()
@@ -156,8 +170,8 @@ local function runStage7()
  -- Nếu có addacc.png trong 5s thì bấm vào chính nó, không có thì bỏ qua
  tapImageCenter(ADDACC_IMG, 82, 5, "Quét addacc")
 
- -- Đợi LogTTT.png
- waitImage(LOGTTT_IMG, 0, "Đợi LogTTT")
+ -- Đợi LogTTT.png hoặc LogTTT1.png, thấy 1 trong 2 đều được
+ waitAnyImage({LOGTTT_IMG, LOGTTT1_IMG}, 0, "Đợi LogTTT/LogTTT1")
 
  -- Tìm và bấm Countwgg.png
  tapImageCenter(COUNTWGG_IMG, 82, 60, "Tìm Countwgg")
