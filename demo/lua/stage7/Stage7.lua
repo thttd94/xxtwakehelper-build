@@ -26,6 +26,10 @@ local BACKUPSAPP_IMG = RES_DIR .. "Backupsapp.png"
 local TIKTOKBUP_IMG = RES_DIR .. "tiktokbup.png"
 local SETNAME_IMG = RES_DIR .. "setname.png"
 local PASTE_IMG = RES_DIR .. "paste.png"
+local TIKTOK_ROW_IMG = RES_DIR .. "tiktok_row.png"
+local TIKTOK_BACKUP_IMG = RES_DIR .. "tiktok_backup.png"
+local TIKTOK_BACKUPDATA_IMG = RES_DIR .. "tiktok_backupData.png"
+local TIKTOK_BACKUPING_IMG = RES_DIR .. "tiktok_backuping.png"
 
 local function sleep(ms)
  sys.msleep(ms)
@@ -145,6 +149,23 @@ local function tapAnyImageCenter(imgList, timeoutSec, label)
  return false, -1, -1, nil
 end
 
+local function waitImageDisappear(img, timeoutSec, label)
+ if not file.exists(img) then return true end
+ local startAt = os.time()
+ local lastShown = -1
+ while os.time() - startAt < timeoutSec do
+  local remain = timeoutSec - (os.time() - startAt)
+  if remain ~= lastShown then
+   showProgress(label or "Đợi ảnh biến mất", remain)
+   lastShown = remain
+  end
+  local ok = findImage(img, 82, 0, 0, 750, 1334)
+  if not ok then return true end
+  sleep(500)
+ end
+ return false
+end
+
 local function swipeUpOnce()
  touch.down(1, 360, 1050)
  sleep(30)
@@ -223,13 +244,23 @@ local function openAppManager()
  countdown("Mở AppManager", 4)
 end
 
-local function runBackupManagerTail()
- touch.tap(362, 398)
- countdown("Sau tap 362,398", 2)
+local function runGroup3AppManagerBackupFlow()
  app.quit(TIKTOK_BUNDLE)
  countdown("Đóng TikTok", 2)
  closeAppManager()
  openAppManager()
+ tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok")
+ swipeUpOnce()
+ tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup")
+ tapImageCenter(TIKTOK_BACKUPDATA_IMG, 82, 30, "Xác nhận data")
+ waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup")
+ waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup")
+end
+
+local function runBackupManagerTail()
+ touch.tap(362, 398)
+ countdown("Sau tap 362,398", 2)
+ runGroup3AppManagerBackupFlow()
  waitImage(BACKUPSAPP_IMG, 0, "Đợi Backupsapp")
  tapImageCenter(TIKTOKBUP_IMG, 82, 60, "Tìm tiktokbup")
  countdown("Sau tap tiktokbup", 2)
