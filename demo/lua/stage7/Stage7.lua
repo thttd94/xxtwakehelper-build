@@ -330,11 +330,12 @@ local function runStage7()
  waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "Đợi LogTTT/LogTTT2")
 
  tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg")
- randomDelayCountdown(10, 60)
 
  countdown("Trước tap 502,792", 3)
  touch.tap(502, 792)
  sleep(1000)
+
+ randomDelayCountdown(10, 60)
 
  waitImage(CHOOSEAN_IMG, 0, "Đợi choosean")
  touch.tap(254, 758)
