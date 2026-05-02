@@ -14,7 +14,6 @@ local LOGTTT_IMG = RES_DIR .. "LogTTT.png"
 local LOGTTT2_IMG = RES_DIR .. "LogTTT2.png"
 local COUNTWGG_IMG = RES_DIR .. "Countwgg.png"
 local COUNTWGG1_IMG = RES_DIR .. "Countwgg1.png"
-local TIKTOKWANT_IMG = RES_DIR .. "tiktokwant.png"
 local CHOOSEAN_IMG = RES_DIR .. "choosean.png"
 local SINTOTT_IMG = RES_DIR .. "sintott.png"
 local SINTOTT2_IMG = RES_DIR .. "sintott2.png"
@@ -278,8 +277,8 @@ local function runBackupManagerTail()
  touch.tap(362, 398)
  countdown("Sau tap 362,398", 2)
  runGroup3AppManagerBackupFlow()
- touch.tap(371, 1279)
- countdown("Sau tap 371,1279", 2)
+ countdown("Sau backup", 5)
+ tapLoopSeconds(379, 1279, 3)
  waitImage(BACKUPSAPP_IMG, 0, "Đợi Backupsapp")
  tapImageCenter(TIKTOKBUP_IMG, 82, 60, "Tìm tiktokbup")
  countdown("Sau tap tiktokbup", 2)
@@ -322,11 +321,9 @@ local function runStage7()
  tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg")
  randomDelayCountdown(10, 60)
 
- local wantOk = waitImage(TIKTOKWANT_IMG, 30, "Quét tiktokwant")
- if wantOk then
-  touch.tap(502, 792)
-  sleep(1000)
- end
+ countdown("Trước tap 502,792", 3)
+ touch.tap(502, 792)
+ sleep(1000)
 
  waitImage(CHOOSEAN_IMG, 0, "Đợi choosean")
  touch.tap(254, 758)
