@@ -102,7 +102,7 @@ local function tapImageCenter(img, sim, timeoutSec, label, x1, y1, x2, y2, offse
   if ok then
    countdown("Thấy ảnh, chờ tap", 2)
    touch.tap(x + offsetX, y + offsetY)
-   waitImageDisappear(img, 30, label or "Đợi ảnh mất", x1, y1, x2, y2)
+   waitImageDisappear(img, 30, "Đợi ảnh mất", x1, y1, x2, y2)
    return true, x, y
   end
   sleep(300)
@@ -166,7 +166,7 @@ local function tapAnyImageCenter(imgList, timeoutSec, label)
   local cx, cy = imageCenter(img, x, y)
   countdown("Thấy ảnh, chờ tap", 2)
   touch.tap(cx, cy)
-  waitImageDisappear(img, 30, label or "Đợi ảnh mất")
+  waitImageDisappear(img, 30, "Đợi ảnh mất")
   return true, cx, cy, img
  end
  return false, -1, -1, nil
