@@ -15,6 +15,13 @@ from xxtouch_openapi_client import XXTouchOpenAPIClient, XXTouchOpenAPIError
 
 CONFIG_PATH = Path(__file__).with_name('xxtouch_router_config.json')
 TXT_POOL_PATH = Path(__file__).with_name('xxtouch_txt_pool.json')
+INLINE_SNIPPETS_PATH = Path(__file__).with_name('xxtouch_inline_snippets.json')
+DEFAULT_INLINE_SNIPPETS = [
+    {
+        'title': 'Code đóng app đang chạy',
+        'code': 'local bid = app.front_bid()\nsys.toast("front: " .. tostring(bid))\nif bid and bid ~= "" then\n app.quit(bid)\nend\n'
+    }
+]
 DEFAULT_ROUTERS = [
     {
         'name': 'TIKTOK 03',
@@ -55,6 +62,38 @@ def load_txt_pool():
 def save_txt_pool(lines):
     safe = [str(line).strip() for line in (lines or []) if str(line).strip()]
     TXT_POOL_PATH.write_text(json.dumps(safe, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def load_inline_snippets():
+    if INLINE_SNIPPETS_PATH.exists():
+        try:
+            data = json.loads(INLINE_SNIPPETS_PATH.read_text(encoding='utf-8'))
+            if isinstance(data, list):
+                result = []
+                for item in data:
+                    if not isinstance(item, dict):
+                        continue
+                    title = str(item.get('title', '')).strip()
+                    code = str(item.get('code', ''))
+                    if title and code.strip():
+                        result.append({'title': title, 'code': code})
+                if result:
+                    return result
+        except Exception:
+            pass
+    return json.loads(json.dumps(DEFAULT_INLINE_SNIPPETS, ensure_ascii=False))
+
+
+def save_inline_snippets(items):
+    safe = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get('title', '')).strip()
+        code = str(item.get('code', ''))
+        if title and code.strip():
+            safe.append({'title': title, 'code': code})
+    INLINE_SNIPPETS_PATH.write_text(json.dumps(safe, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
 def save_router_config(routers):
@@ -100,6 +139,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.inline_router_label = None
         self.router_tabs = None
         self.txt_pool = load_txt_pool()
+        self.inline_snippets = load_inline_snippets()
         self.router_devices_trees = {}
         self.router_logs_widgets = {}
         self.router_file_widgets = {}
@@ -117,6 +157,9 @@ class XXTouchOnlyDemo(tk.Tk):
         self.remote_context = {'router': None, 'machines': [], 'index': 0, 'token': 0}
         self.group3_schedule_jobs = {}
         self.group3_schedule_tree = None
+        self.inline_title_var = None
+        self.inline_snippet_var = None
+        self.inline_snippet_combo = None
         self._style()
         self._build()
         self._restore_runtime_prefs()
@@ -621,6 +664,20 @@ class XXTouchOnlyDemo(tk.Tk):
         self.inline_router_label = ttk.Label(head, text='Router: ?', style='Sub.TLabel')
         self.inline_router_label.pack(side='left', padx=(12, 0))
         ttk.Button(head, text='Chạy inline', command=lambda: self._run_background(self._current_router(), self._run_inline_for_router)).pack(side='right')
+
+        preset_row = ttk.Frame(card, style='Card.TFrame')
+        preset_row.pack(fill='x', pady=(0, 8))
+        ttk.Label(preset_row, text='Tiêu đề', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        self.inline_title_var = tk.StringVar()
+        title_entry = ttk.Entry(preset_row, textvariable=self.inline_title_var, width=34)
+        title_entry.pack(side='left', padx=(0, 10))
+        ttk.Label(preset_row, text='Tập lệnh đã lưu', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        self.inline_snippet_var = tk.StringVar()
+        self.inline_snippet_combo = ttk.Combobox(preset_row, textvariable=self.inline_snippet_var, state='readonly', width=34)
+        self.inline_snippet_combo.pack(side='left', padx=(0, 8))
+        self.inline_snippet_combo.bind('<<ComboboxSelected>>', lambda _e: self._load_selected_inline_snippet())
+        ttk.Button(preset_row, text='Lưu preset', command=self._save_current_inline_snippet).pack(side='left')
+
         editor_wrap = tk.Frame(card, bg='#1e1e1e', bd=1, relief='solid')
         editor_wrap.pack(fill='both', expand=True)
         line_numbers = tk.Text(editor_wrap, width=5, padx=6, takefocus=0, border=0, background='#252526', foreground='#858585', state='normal', wrap='none')
@@ -703,6 +760,7 @@ class XXTouchOnlyDemo(tk.Tk):
             colorize()
 
         code.bind('<KeyRelease>', persist_and_colorize)
+        self._refresh_inline_snippet_combo()
 
     def _logs_tab(self, parent, router):
         card = ttk.Frame(parent, style='Card.TFrame', padding=12)
@@ -756,6 +814,8 @@ class XXTouchOnlyDemo(tk.Tk):
                 if self.inline_editor is not None:
                     self.inline_editor.delete('1.0', 'end')
                     self.inline_editor.insert('1.0', router.get('inline_script', ''))
+                if self.inline_title_var is not None:
+                    self.inline_title_var.set('')
             except Exception:
                 self.inline_router_label.config(text='Router: ?')
 
@@ -1331,6 +1391,56 @@ class XXTouchOnlyDemo(tk.Tk):
             self.header_status_label.config(text='Router chưa có dữ liệu máy')
             return
         self.header_status_label.config(text=f'Router {router.get("name", "")} - Đang có số máy từ {self._router_machine_range_text(router)}')
+
+    def _refresh_inline_snippet_combo(self):
+        if self.inline_snippet_combo is None:
+            return
+        titles = [item.get('title', '') for item in self.inline_snippets]
+        self.inline_snippet_combo['values'] = titles
+        if self.inline_snippet_var is not None and titles and not self.inline_snippet_var.get().strip():
+            self.inline_snippet_var.set(titles[0])
+
+    def _find_inline_snippet(self, title):
+        target = str(title or '').strip()
+        for item in self.inline_snippets:
+            if str(item.get('title', '')).strip() == target:
+                return item
+        return None
+
+    def _load_selected_inline_snippet(self):
+        if self.inline_snippet_var is None or self.inline_editor is None:
+            return
+        title = self.inline_snippet_var.get().strip()
+        item = self._find_inline_snippet(title)
+        if not item:
+            return
+        self.inline_editor.delete('1.0', 'end')
+        self.inline_editor.insert('1.0', item.get('code', ''))
+        if self.inline_title_var is not None:
+            self.inline_title_var.set(title)
+
+    def _save_current_inline_snippet(self):
+        if self.inline_editor is None or self.inline_title_var is None:
+            return
+        title = self.inline_title_var.get().strip()
+        code = self.inline_editor.get('1.0', 'end-1c')
+        if not title:
+            messagebox.showinfo('Thiếu tiêu đề', 'Anh nhập tiêu đề preset trước đã')
+            return
+        if not code.strip():
+            messagebox.showinfo('Thiếu code', 'Ô inline đang trống')
+            return
+        item = self._find_inline_snippet(title)
+        if item is None:
+            self.inline_snippets.append({'title': title, 'code': code})
+        else:
+            item['code'] = code
+        save_inline_snippets(self.inline_snippets)
+        self.inline_snippets = load_inline_snippets()
+        self._refresh_inline_snippet_combo()
+        if self.inline_snippet_var is not None:
+            self.inline_snippet_var.set(title)
+        self._append_router_log(self._current_router(), f'INLINE: đã lưu preset "{title}"')
 
     def _current_router(self):
         idx = self.router_tabs.index(self.router_tabs.select())
@@ -2165,6 +2275,14 @@ class XXTouchOnlyDemo(tk.Tk):
             save_lines([], log=True)
             input_box.delete('1.0', 'end')
 
+        def copy_remaining():
+            lines = current_lines()
+            text = '\n'.join(lines)
+            self.clipboard_clear()
+            self.clipboard_append(text)
+            self.update_idletasks()
+            self._append_router_log(router, f'TXT: đã copy {len(lines)} dòng còn lại')
+
         def send_txt():
             rows = self._selected_rows(router)
             if not rows:
@@ -2229,6 +2347,7 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Button(btn_row, text='Áp dụng sửa', command=apply_edit).pack(side='left', padx=(8, 0))
         ttk.Button(btn_row, text='Xóa dòng chọn', command=remove_selected).pack(side='left', padx=(8, 0))
         ttk.Button(btn_row, text='Clear all', command=clear_all).pack(side='left', padx=(8, 0))
+        ttk.Button(btn_row, text='Copy còn lại', command=copy_remaining).pack(side='left', padx=(8, 0))
         ttk.Button(btn_row, text='SEND TXT', command=send_txt).pack(side='right')
         ttk.Button(btn_row, text='Đóng', command=win.destroy).pack(side='right', padx=(0, 8))
 
