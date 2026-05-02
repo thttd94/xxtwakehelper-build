@@ -234,8 +234,9 @@ end
 
 local function randomMeaningText8()
  local words = {
-  "thanhdat", "minhquan", "hoangnam", "quanghuy", "anhkhoa",
-  "baokhanh", "ducthanh", "huyhoang", "namphong", "trunghieu"
+  "michael", "william", "charlie", "thomas", "george",
+  "andrew", "patrick", "daniel", "robert", "jessica",
+  "sophia", "emily", "oliver", "harry", "jameson"
  }
  local w = words[math.random(1, #words)]
  if #w > 8 then w = string.sub(w, 1, 8) end
@@ -253,6 +254,13 @@ local function inputText(text)
  sleep(300)
  key.send_text(text)
  sleep(1000)
+end
+
+local function clearNameFieldFallback()
+ for i = 1, 30 do
+  touch.tap(696, 1175)
+  sleep(167)
+ end
 end
 
 local function tapLoopSeconds(x, y, sec)
@@ -279,12 +287,12 @@ local function runGroup3AppManagerBackupFlow()
  countdown("Đóng TikTok", 2)
  closeAppManager()
  openAppManager()
- tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok", 0, 150, 750, 1100)
+ tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok", 0, 526, 512, 1171)
  swipeUpOnce()
- tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup", 0, 150, 750, 1334)
- tapImageCenter(TIKTOK_BACKUPDATA_IMG, 82, 30, "Xác nhận data", 0, 150, 750, 1334)
- waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 150, 750, 1334)
- waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 150, 750, 1334)
+ tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup", 0, 526, 512, 1171)
+ tapImageCenter(TIKTOK_BACKUPDATA_IMG, 82, 30, "Xác nhận data", 0, 526, 512, 1171)
+ waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 526, 512, 1171)
+ waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 526, 512, 1171)
 end
 
 local function runBackupManagerTail()
@@ -292,7 +300,7 @@ local function runBackupManagerTail()
  countdown("Sau tap 362,398", 2)
  runGroup3AppManagerBackupFlow()
  countdown("Sau backup", 5)
- tapLoopSeconds(379, 1279, 3)
+ tapLoopSeconds(377, 1278, 3)
  waitImage(BACKUPSAPP_IMG, 0, "Đợi Backupsapp")
  tapImageCenter(TIKTOKBUP_IMG, 82, 60, "Tìm tiktokbup")
  countdown("Sau tap tiktokbup", 2)
@@ -401,6 +409,7 @@ local function runStage7()
   sys.toast("Tiếp: tap ô tên", 0)
   touch.tap(425, 516)
   countdown("Sau tap ô tên", 1)
+  clearNameFieldFallback()
   sys.toast("Tiếp: nhập tên", 0)
   inputText(createRandomName19())
   sys.toast("Tiếp: tap 591,819", 0)
