@@ -286,7 +286,7 @@ local function runStage7()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  countdown("Sau countt", 5)
 
- local birthdayOk = waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 60, "Quét birthday/birthday1", 38, 473, 681, 632)
+ local birthdayOk = waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 30, "Quét birthday/birthday1", 38, 473, 681, 632)
  if birthdayOk then
   swipeDownAt(427, 892)
   swipeDownAt(566, 913)
@@ -309,7 +309,7 @@ local function runStage7()
 
  countdown("Trước tap 680,1286", 3)
  sys.toast("Tiếp: tap 680,1286", 0)
- tapLoopSeconds(680, 1286, 30)
+ tapLoopSeconds(680, 1286, 15)
  sys.toast("Tiếp: AppManager backup", 0)
  runBackupManagerTail()
 
