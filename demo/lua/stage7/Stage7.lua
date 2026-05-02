@@ -25,7 +25,15 @@ local function sleep(ms)
 end
 
 local function toast(msg)
- sys.toast("Ver " .. SCRIPT_VERSION .. " : " .. tostring(msg or ""), 0)
+ -- Không hiển thị status mô tả bước, chỉ hiển thị countdown thời gian.
+end
+
+local function countdown(label, sec)
+ while sec > 0 do
+  sys.toast(tostring(label or "Đếm ngược") .. " " .. tostring(sec) .. "s", 0)
+  sleep(1000)
+  sec = sec - 1
+ end
 end
 
 local function findImage(img, sim, x1, y1, x2, y2)
@@ -57,7 +65,6 @@ local function tapImageCenter(img, sim, timeoutSec, label)
    sleep(1000)
    return true, cx, cy
   end
-  if label then toast(label) end
   sleep(500)
  end
  return false, -1, -1
@@ -68,7 +75,6 @@ local function waitImage(img, timeoutSec, label)
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
   local ok, x, y = findImage(img, 82, 0, 0, 750, 1334)
   if ok then return true, x, y end
-  if label then toast(label) end
   sleep(500)
  end
  return false, -1, -1
@@ -81,7 +87,6 @@ local function waitAnyImage(imgList, timeoutSec, label)
    local ok, x, y = findImage(imgList[i], 82, 0, 0, 750, 1334)
    if ok then return true, x, y, imgList[i] end
   end
-  if label then toast(label) end
   sleep(500)
  end
  return false, -1, -1, nil
@@ -172,77 +177,57 @@ local function tapPinkOrSwipeDown()
   sleep(1000)
   return true
  end
- sleep(2000)
+ countdown("Trước vuốt 153,898", 2)
  swipeDownAt(153, 898)
  return false
 end
 
 local function runStage7()
- toast("Stage 7 start")
-
- toast("Bước 1: đóng TikTok 2s")
  app.quit(TIKTOK_BUNDLE)
- sleep(2000)
+ countdown("Đóng TikTok", 2)
 
- toast("Bước 2: mở TikTok đợi 30s")
  app.run(TIKTOK_BUNDLE)
- sleep(30000)
+ countdown("Mở TikTok", 30)
 
- toast("Bước 3: tap 674,1281 đợi 20s")
  touch.tap(674, 1281)
- sleep(20000)
+ countdown("Sau tap 674,1281", 20)
 
- toast("Bước 4: quét addacc 5s")
- tapImageCenter(ADDACC_IMG, 82, 5, "Bước 4: quét addacc")
+ tapImageCenter(ADDACC_IMG, 82, 5, "Quét addacc")
 
- toast("Bước 5: đợi LogTTT/LogTTT2")
- waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "Bước 5: đợi LogTTT/LogTTT2")
+ waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "")
 
- toast("Bước 6: tìm Countwgg/Countwgg1")
- tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Bước 6: tìm Countwgg/Countwgg1")
+ tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg")
 
- toast("Bước 7: quét tiktokwant 30s")
- local wantOk = waitImage(TIKTOKWANT_IMG, 30, "Bước 7: quét tiktokwant")
+ local wantOk = waitImage(TIKTOKWANT_IMG, 30, "")
  if wantOk then
   touch.tap(502, 792)
   sleep(1000)
  end
 
- toast("Bước 8: đợi choosean")
- waitImage(CHOOSEAN_IMG, 0, "Bước 8: đợi choosean")
+ waitImage(CHOOSEAN_IMG, 0, "")
  touch.tap(254, 758)
  sleep(1000)
 
- toast("Bước 9: đợi sintott")
- waitImage(SINTOTT_IMG, 0, "Bước 9: đợi sintott")
- toast("Bước 10: vuốt lên tìm countt")
+ waitImage(SINTOTT_IMG, 0, "")
  swipeUpOnce()
- tapImageCenter(COUNTT_IMG, 82, 60, "Bước 10: tìm countt")
- sleep(5000)
+ tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
+ countdown("Sau countt", 5)
 
- toast("Bước 11: đợi birthday/birthday1")
- waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 0, "Bước 11: đợi birthday/birthday1")
+ waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 0, "")
  swipeDownAt(427, 892)
  swipeDownAt(566, 913)
- sleep(2000)
+ countdown("Trước vuốt 153,898", 2)
  swipeDownAt(153, 898)
 
- toast("Bước 12: random delay 1-300s")
  randomDelayCountdown(1, 300)
- toast("Bước 13: kiểm tra màu 552,1206")
  tapPinkOrSwipeDown()
 
- toast("Bước 14: đợi creatname")
- waitImage(CREATNAME_IMG, 0, "Bước 14: đợi creatname")
+ waitImage(CREATNAME_IMG, 0, "")
  touch.tap(425, 516)
- sleep(1000)
- toast("Bước 15: nhập tên 19 ký tự")
+ countdown("Sau tap ô tên", 1)
  inputText(createRandomName19())
- toast("Bước 16: tap 591,819")
  touch.tap(591, 819)
- sleep(3000)
-
- toast("Bước 17: tap 680,1286 trong 60s")
+ countdown("Sau tap 591,819", 3)
  tapLoop60s(680, 1286)
 
  sys.toast("Stage 7 hoàn thành", 1)
