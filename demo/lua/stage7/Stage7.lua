@@ -22,7 +22,8 @@ local BIRTHDAY_IMG = RES_DIR .. "birthday.png"
 local BIRTHDAY1_IMG = RES_DIR .. "birthday1.png"
 local BIRTHDAY2_IMG = RES_DIR .. "birthday2.png"
 local BIRTHDAY3_IMG = RES_DIR .. "birthday3.png"
-local CREATNAME_IMG = RES_DIR .. "creatname.png"
+local SKIP_IMG = RES_DIR .. "skip.png"
+local SKIP2_IMG = RES_DIR .. "skip2.png"
 local BACKUPSAPP_IMG = RES_DIR .. "Backupsapp.png"
 local TIKTOKBUP_IMG = RES_DIR .. "tiktokbup.png"
 local SETNAME_IMG = RES_DIR .. "setname.png"
@@ -294,7 +295,7 @@ local function runGroup3AppManagerBackupFlow()
  tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup", 0, 526, 512, 1171)
  touch.tap(387, 1137)
  countdown("Sau tap xác nhận backup", 1)
- waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 526, 512, 1171)
+ waitImage(TIKTOK_BACKUPING_IMG, 60, "Đợi popup backup", 0, 526, 512, 1171)
  waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 526, 512, 1171)
  countdown("Backup xong, chờ tiếp", 30)
  local tap_ok_start = os.time()
@@ -332,6 +333,12 @@ local function tapPinkOrSwipeDown()
  end
  countdown("Trước vuốt 153,898", 2)
  swipeDownAt(153, 898)
+ color = screen.get_color(552, 1206)
+ if color == 0xfe2c55 then
+  touch.tap(552, 1206)
+  sleep(1000)
+  return true
+ end
  return false
 end
 
@@ -375,6 +382,7 @@ local function runStage7()
  app.quit(TIKTOK_BUNDLE)
  countdown("Đóng TikTok", 2)
 
+ randomDelayCountdown(5, 180)
  app.run(TIKTOK_BUNDLE)
  countdownKeepTikTok("Mở TikTok", 30)
 
@@ -413,17 +421,7 @@ local function runStage7()
   randomDelayCountdown(1, 300)
   sys.toast("Tiếp: kiểm tra 552,1206", 0)
   tapPinkOrSwipeDown()
-  sys.toast("Tiếp: đợi creatname", 0)
-  waitImage(CREATNAME_IMG, 0, "Đợi creatname")
-  sys.toast("Tiếp: tap ô tên", 0)
-  touch.tap(425, 516)
-  countdown("Sau tap ô tên", 1)
-  clearNameFieldFallback()
-  sys.toast("Tiếp: nhập tên", 0)
-  inputText(createRandomName19())
-  sys.toast("Tiếp: tap 591,819", 0)
-  touch.tap(591, 819)
-  countdown("Sau tap 591,819", 3)
+  tapAnyImageCenter({SKIP_IMG, SKIP2_IMG}, 30, "Tìm skip/skip2")
  end
 
  countdown("Trước tap 680,1286", 3)
