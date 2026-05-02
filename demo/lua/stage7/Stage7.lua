@@ -179,66 +179,69 @@ end
 local function runStage7()
  toast("Stage 7 start")
 
- -- Đóng TikTok 2s
+ toast("Bước 1: đóng TikTok 2s")
  app.quit(TIKTOK_BUNDLE)
  sleep(2000)
 
- -- Mở lại TikTok đợi 30s
+ toast("Bước 2: mở TikTok đợi 30s")
  app.run(TIKTOK_BUNDLE)
  sleep(30000)
 
- -- Bấm 674,1281 đợi 20s
+ toast("Bước 3: tap 674,1281 đợi 20s")
  touch.tap(674, 1281)
  sleep(20000)
 
- -- Nếu có addacc.png trong 5s thì bấm vào chính nó, không có thì bỏ qua
- tapImageCenter(ADDACC_IMG, 82, 5, "Quét addacc")
+ toast("Bước 4: quét addacc 5s")
+ tapImageCenter(ADDACC_IMG, 82, 5, "Bước 4: quét addacc")
 
- -- Đợi LogTTT.png
- waitImage(LOGTTT_IMG, 0, "Đợi LogTTT")
+ toast("Bước 5: đợi LogTTT")
+ waitImage(LOGTTT_IMG, 0, "Bước 5: đợi LogTTT")
 
- -- Tìm và bấm Countwgg.png hoặc Countwgg1.png, thấy 1 trong 2 đều được
- tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg/Countwgg1")
+ toast("Bước 6: tìm Countwgg/Countwgg1")
+ tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Bước 6: tìm Countwgg/Countwgg1")
 
- -- Nếu có tiktokwant.png thì tap 502,792
- local wantOk = waitImage(TIKTOKWANT_IMG, 30, "Quét tiktokwant")
+ toast("Bước 7: quét tiktokwant 30s")
+ local wantOk = waitImage(TIKTOKWANT_IMG, 30, "Bước 7: quét tiktokwant")
  if wantOk then
   touch.tap(502, 792)
   sleep(1000)
  end
 
- -- Nếu thấy choosean.png thì bấm 254,758
- waitImage(CHOOSEAN_IMG, 0, "Đợi choosean")
+ toast("Bước 8: đợi choosean")
+ waitImage(CHOOSEAN_IMG, 0, "Bước 8: đợi choosean")
  touch.tap(254, 758)
  sleep(1000)
 
- -- Nếu thấy sintott.png thì vuốt lên 1 cái rồi tìm và tap countt.png đợi 5s
- waitImage(SINTOTT_IMG, 0, "Đợi sintott")
+ toast("Bước 9: đợi sintott")
+ waitImage(SINTOTT_IMG, 0, "Bước 9: đợi sintott")
+ toast("Bước 10: vuốt lên tìm countt")
  swipeUpOnce()
- tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
+ tapImageCenter(COUNTT_IMG, 82, 60, "Bước 10: tìm countt")
  sleep(5000)
 
- -- Nếu thấy birthday.png hoặc birthday1.png thì vuốt xuống lần lượt các vị trí
- waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 0, "Đợi birthday/birthday1")
+ toast("Bước 11: đợi birthday/birthday1")
+ waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 0, "Bước 11: đợi birthday/birthday1")
  swipeDownAt(427, 892)
  swipeDownAt(566, 913)
  sleep(2000)
  swipeDownAt(153, 898)
 
- -- Random 1s - 300s trước khi xử lý 552,1206
- -- Nếu 552,1206 là màu 0xfe2c55 thì bấm, nếu không thì sau 2s vuốt xuống ở 153,898.
+ toast("Bước 12: random delay 1-300s")
  randomDelayCountdown(1, 300)
+ toast("Bước 13: kiểm tra màu 552,1206")
  tapPinkOrSwipeDown()
 
- -- Nếu thấy creatname.png thì nhập tên 19 ký tự rồi tap 591,819
- waitImage(CREATNAME_IMG, 0, "Đợi creatname")
+ toast("Bước 14: đợi creatname")
+ waitImage(CREATNAME_IMG, 0, "Bước 14: đợi creatname")
  touch.tap(425, 516)
  sleep(1000)
+ toast("Bước 15: nhập tên 19 ký tự")
  inputText(createRandomName19())
+ toast("Bước 16: tap 591,819")
  touch.tap(591, 819)
  sleep(3000)
 
- -- Tap liên tục 680,1286 trong 60s rồi dừng
+ toast("Bước 17: tap 680,1286 trong 60s")
  tapLoop60s(680, 1286)
 
  sys.toast("Stage 7 hoàn thành", 1)
