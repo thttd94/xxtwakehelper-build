@@ -243,14 +243,12 @@ function waitWellcom()
  end
 end
 
-function slowSwipeUpOnce()
- phase("Vuốt lên chậm")
+function swipeUpOnceNormal()
+ phase("Vuốt lên")
  touch.down(1, 360, 1050)
- sleep(900)
- touch.move(1, 360, 930)
- sleep(900)
+ sleep(30)
  touch.move(1, 360, 820)
- sleep(900)
+ sleep(30)
  touch.up(1)
  waitPhase(1200)
 end
@@ -264,7 +262,7 @@ function swipeUpUntilInderstand()
    phase("Thấy inderstand.png")
    return true, x, y
   end
-  slowSwipeUpOnce()
+  swipeUpOnceNormal()
  end
 end
 
@@ -304,6 +302,7 @@ function runStage6()
  waitPhase(5000)
 
  -- Bước 3: chỉ bắt đầu sau khi bước 2 đã dán input lần 2 và bấm return lần 2 xong.
+ -- Đoạn này chỉ vuốt lên bình thường, không ấn giữ lâu. Ấn giữ chỉ dùng lúc vuốt xuống tìm sign.png ban đầu.
  phase("Bước 3: tìm inderstand")
  swipeUpUntilInderstand()
 
