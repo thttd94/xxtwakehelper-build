@@ -1,5 +1,13 @@
 screen.init(0)
 
+local TOUCH_ID_IMG = "/var/mobile/Media/1ferver/lua/examples/touchID.png"
+local touch_id_x, touch_id_y = screen.find_image(TOUCH_ID_IMG, 82, 0, 0, 750, 1334)
+if touch_id_x ~= -1 then
+    touch.tap(381, 792)
+    sys.toast("Tapped Touch ID", 1)
+    sys.msleep(1000)
+end
+
 clear.app_data("com.ss.iphone.ugc.Ame")
 clear.app_data("com.ss.iphone.ugc.tiktok.lite")
 sys.toast("clear tiktok done", 1)
