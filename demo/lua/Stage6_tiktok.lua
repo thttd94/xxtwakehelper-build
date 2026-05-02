@@ -6,6 +6,9 @@ local sys = require("sys")
 
 local SCRIPT_VERSION = "STAGE6_TIKTOK_V1"
 
+app.quit("com.apple.mobilesafari")
+sys.msleep(1000)
+
 local function countdownStartDelay(sec)
  while sec > 0 do
   sys.toast("Delay start " .. tostring(sec) .. "s", 0)
