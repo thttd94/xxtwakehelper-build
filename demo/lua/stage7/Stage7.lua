@@ -2,6 +2,7 @@ screen.init(0)
 
 local app = require("app")
 local sys = require("sys")
+local file = require("file")
 
 local SCRIPT_VERSION = "STAGE7_TIKTOK_V1"
 local TIKTOK_BUNDLE = "com.ss.iphone.ugc.Ame"
@@ -62,6 +63,7 @@ local function imageCenter(imgPath, x, y)
 end
 
 local function tapImageCenter(img, sim, timeoutSec, label)
+ if not file.exists(img) then return false, -1, -1 end
  local startAt = os.time()
  while os.time() - startAt < timeoutSec do
   local ok, x, y = findImage(img, sim or 82, 0, 0, 750, 1334)
@@ -77,6 +79,7 @@ local function tapImageCenter(img, sim, timeoutSec, label)
 end
 
 local function waitImage(img, timeoutSec, label)
+ if not file.exists(img) then return false, -1, -1 end
  local startAt = os.time()
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
   local ok, x, y = findImage(img, 82, 0, 0, 750, 1334)
@@ -94,8 +97,11 @@ local function waitAnyImage(imgList, timeoutSec, label, x1, y1, x2, y2)
  local startAt = os.time()
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
   for i = 1, #imgList do
-   local ok, x, y = findImage(imgList[i], 82, x1, y1, x2, y2)
-   if ok then return true, x, y, imgList[i] end
+   local img = imgList[i]
+   if file.exists(img) then
+    local ok, x, y = findImage(img, 82, x1, y1, x2, y2)
+    if ok then return true, x, y, img end
+   end
   end
   sleep(500)
  end
