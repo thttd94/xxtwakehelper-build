@@ -343,6 +343,8 @@ local function runStage7()
 
  waitAnyImage({SINTOTT_IMG, SINTOTT2_IMG}, 0, "Đợi sintott/sintott2")
  swipeUpOnce()
+ countdown("Trước vuốt thêm", 2)
+ swipeUpOnce()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  countdown("Sau countt", 5)
 
