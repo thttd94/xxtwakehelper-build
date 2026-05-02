@@ -289,12 +289,18 @@ local function runGroup3AppManagerBackupFlow()
  closeAppManager()
  openAppManager()
  tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok", 0, 526, 512, 1171)
+ countdown("Trước vuốt Backup", 5)
  swipeUpOnce()
  tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup", 0, 526, 512, 1171)
  touch.tap(387, 1137)
  countdown("Sau tap xác nhận backup", 1)
  waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 526, 512, 1171)
  waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 526, 512, 1171)
+ local tap_ok_start = os.time()
+ while os.time() - tap_ok_start < 5 do
+  touch.tap(365, 1284)
+  sleep(500)
+ end
 end
 
 local function runBackupManagerTail()
