@@ -4,6 +4,11 @@ local app = require("app")
 local file = require("file")
 local sys = require("sys")
 
+math.randomseed(os.time())
+local START_DELAY_SEC = math.random(1, 500)
+sys.toast("Delay start " .. tostring(START_DELAY_SEC) .. "s", 1)
+sys.msleep(START_DELAY_SEC * 1000)
+
 local SCRIPT_VERSION = "STAGE6_TIKTOK_V1"
 local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 local INPUT_PATH = RES_DIR .. "input.txt"
