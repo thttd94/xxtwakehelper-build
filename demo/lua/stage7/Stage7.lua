@@ -9,6 +9,7 @@ local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 
 local ADDACC_IMG = RES_DIR .. "addacc.png"
 local LOGTTT_IMG = RES_DIR .. "LogTTT.png"
+local LOGTTT2_IMG = RES_DIR .. "LogTTT2.png"
 local COUNTWGG_IMG = RES_DIR .. "Countwgg.png"
 local COUNTWGG1_IMG = RES_DIR .. "Countwgg1.png"
 local TIKTOKWANT_IMG = RES_DIR .. "tiktokwant.png"
@@ -194,8 +195,8 @@ local function runStage7()
  toast("Bước 4: quét addacc 5s")
  tapImageCenter(ADDACC_IMG, 82, 5, "Bước 4: quét addacc")
 
- toast("Bước 5: đợi LogTTT")
- waitImage(LOGTTT_IMG, 0, "Bước 5: đợi LogTTT")
+ toast("Bước 5: đợi LogTTT/LogTTT2")
+ waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "Bước 5: đợi LogTTT/LogTTT2")
 
  toast("Bước 6: tìm Countwgg/Countwgg1")
  tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Bước 6: tìm Countwgg/Countwgg1")
