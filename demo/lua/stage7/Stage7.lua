@@ -16,6 +16,7 @@ local CHOOSEAN_IMG = RES_DIR .. "choosean.png"
 local SINTOTT_IMG = RES_DIR .. "sintott.png"
 local COUNTT_IMG = RES_DIR .. "countt.png"
 local BIRTHDAY_IMG = RES_DIR .. "birthday.png"
+local BIRTHDAY1_IMG = RES_DIR .. "birthday1.png"
 local CREATNAME_IMG = RES_DIR .. "creatname.png"
 
 local function sleep(ms)
@@ -163,6 +164,18 @@ local function tapLoop60s(x, y)
  end
 end
 
+local function tapPinkOrSwipeDown()
+ local color = screen.get_color(552, 1206)
+ if color == 0xfe2c55 then
+  touch.tap(552, 1206)
+  sleep(1000)
+  return true
+ end
+ sleep(2000)
+ swipeDownAt(153, 898)
+ return false
+end
+
 local function runStage7()
  toast("Stage 7 start")
 
@@ -174,9 +187,9 @@ local function runStage7()
  app.run(TIKTOK_BUNDLE)
  sleep(30000)
 
- -- Bấm 674,1281 đợi 5s
+ -- Bấm 674,1281 đợi 20s
  touch.tap(674, 1281)
- sleep(5000)
+ sleep(20000)
 
  -- Nếu có addacc.png trong 5s thì bấm vào chính nó, không có thì bỏ qua
  tapImageCenter(ADDACC_IMG, 82, 5, "Quét addacc")
@@ -205,17 +218,17 @@ local function runStage7()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  sleep(5000)
 
- -- Nếu thấy birthday.png thì vuốt xuống lần lượt các vị trí
- waitImage(BIRTHDAY_IMG, 0, "Đợi birthday")
+ -- Nếu thấy birthday.png hoặc birthday1.png thì vuốt xuống lần lượt các vị trí
+ waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 0, "Đợi birthday/birthday1")
  swipeDownAt(427, 892)
  swipeDownAt(566, 913)
  sleep(2000)
  swipeDownAt(153, 898)
 
- -- Random 1s - 300s trước khi bấm 552,1206
+ -- Random 1s - 300s trước khi xử lý 552,1206
+ -- Nếu 552,1206 là màu 0xfe2c55 thì bấm, nếu không thì sau 2s vuốt xuống ở 153,898.
  randomDelayCountdown(1, 300)
- touch.tap(552, 1206)
- sleep(1000)
+ tapPinkOrSwipeDown()
 
  -- Nếu thấy creatname.png thì nhập tên 19 ký tự rồi tap 591,819
  waitImage(CREATNAME_IMG, 0, "Đợi creatname")
