@@ -20,7 +20,7 @@ end
 math.randomseed(os.time())
 local START_DELAY_SEC = math.random(1, 500)
 countdownStartDelay(START_DELAY_SEC)
-
+sys.toast("Quá trình login gg đang thực hiện ....", 0)
 
 local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 local INPUT_PATH = RES_DIR .. "input.txt"
@@ -49,24 +49,15 @@ local function shortText(t)
 end
 
 function status(t)
- t = shortText(t)
- local text = "Ver " .. SCRIPT_VERSION .. " : " .. t
- local now = os.time()
- if text ~= __last_status or now - __last_status_at >= 1 then
-  sys.toast(text, 0)
-  __last_status = text
-  __last_status_at = now
- end
+ -- Giữ im lặng trong quá trình chạy, tránh spam status.
 end
 
 function phase(t)
  __phase = tostring(t or "")
- __last_status = ""
- status(__phase)
 end
 
 function phaseProgress(sec)
- status(__phase .. " " .. tostring(sec) .. "s")
+ -- Giữ im lặng trong quá trình chạy, tránh spam status.
 end
 
 function findImage(img, sim, x1, y1, x2, y2)
@@ -332,7 +323,7 @@ function runStage6()
  phase("Bước 3: tìm inderstand")
  swipeUpUntilInderstand()
 
- phase("Stage 6 xong")
+ sys.toast("Hoàn thành login gg", 1)
  return true
 end
 
