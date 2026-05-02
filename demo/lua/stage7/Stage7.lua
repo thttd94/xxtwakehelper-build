@@ -35,9 +35,13 @@ local function toast(msg)
  -- Không hiển thị status mô tả bước, chỉ hiển thị countdown thời gian.
 end
 
+local function showProgress(label, sec)
+ sys.toast(tostring(label or "Tiến trình") .. " " .. tostring(sec) .. "s", 0)
+end
+
 local function countdown(label, sec)
  while sec > 0 do
-  sys.toast(tostring(label or "Đếm ngược") .. " " .. tostring(sec) .. "s", 0)
+  showProgress(label, sec)
   sleep(1000)
   sec = sec - 1
  end
@@ -65,7 +69,13 @@ end
 local function tapImageCenter(img, sim, timeoutSec, label)
  if not file.exists(img) then return false, -1, -1 end
  local startAt = os.time()
+ local lastShown = -1
  while os.time() - startAt < timeoutSec do
+  local remain = timeoutSec - (os.time() - startAt)
+  if remain ~= lastShown then
+   showProgress(label or "Quét ảnh", remain)
+   lastShown = remain
+  end
   local ok, x, y = findImage(img, sim or 82, 0, 0, 750, 1334)
   if ok then
    local cx, cy = imageCenter(img, x, y)
@@ -81,7 +91,15 @@ end
 local function waitImage(img, timeoutSec, label)
  if not file.exists(img) then return false, -1, -1 end
  local startAt = os.time()
+ local lastShown = -1
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
+  local elapsed = os.time() - startAt
+  local shown = elapsed
+  if timeoutSec > 0 then shown = timeoutSec - elapsed end
+  if shown ~= lastShown then
+   showProgress(label or "Chờ ảnh", shown)
+   lastShown = shown
+  end
   local ok, x, y = findImage(img, 82, 0, 0, 750, 1334)
   if ok then return true, x, y end
   sleep(500)
@@ -95,7 +113,15 @@ local function waitAnyImage(imgList, timeoutSec, label, x1, y1, x2, y2)
  x2 = x2 or 750
  y2 = y2 or 1334
  local startAt = os.time()
+ local lastShown = -1
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
+  local elapsed = os.time() - startAt
+  local shown = elapsed
+  if timeoutSec > 0 then shown = timeoutSec - elapsed end
+  if shown ~= lastShown then
+   showProgress(label or "Chờ ảnh", shown)
+   lastShown = shown
+  end
   for i = 1, #imgList do
    local img = imgList[i]
    if file.exists(img) then
@@ -141,7 +167,7 @@ local function randomDelayCountdown(minSec, maxSec)
  math.randomseed(os.time())
  local sec = math.random(minSec, maxSec)
  while sec > 0 do
-  sys.toast("Random delay " .. tostring(sec) .. "s", 0)
+  showProgress("Random delay", sec)
   sleep(1000)
   sec = sec - 1
  end
