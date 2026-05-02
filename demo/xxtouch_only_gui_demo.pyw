@@ -677,6 +677,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.inline_snippet_combo.pack(side='left', padx=(0, 8))
         self.inline_snippet_combo.bind('<<ComboboxSelected>>', lambda _e: self._load_selected_inline_snippet())
         ttk.Button(preset_row, text='Lưu preset', command=self._save_current_inline_snippet).pack(side='left')
+        ttk.Button(preset_row, text='Xóa preset', command=self._delete_selected_inline_snippet).pack(side='left', padx=(8, 0))
 
         editor_wrap = tk.Frame(card, bg='#1e1e1e', bd=1, relief='solid')
         editor_wrap.pack(fill='both', expand=True)
@@ -1441,6 +1442,30 @@ class XXTouchOnlyDemo(tk.Tk):
         if self.inline_snippet_var is not None:
             self.inline_snippet_var.set(title)
         self._append_router_log(self._current_router(), f'INLINE: đã lưu preset "{title}"')
+
+    def _delete_selected_inline_snippet(self):
+        if self.inline_snippet_var is None:
+            return
+        title = self.inline_snippet_var.get().strip()
+        if not title:
+            messagebox.showinfo('Chưa chọn preset', 'Anh chọn preset cần xóa trước đã')
+            return
+        item = self._find_inline_snippet(title)
+        if item is None:
+            messagebox.showinfo('Không thấy preset', f'Không tìm thấy preset "{title}"')
+            return
+        if not messagebox.askyesno('Xóa preset', f'Xóa preset "{title}"?'):
+            return
+        self.inline_snippets = [p for p in self.inline_snippets if str(p.get('title', '')).strip() != title]
+        save_inline_snippets(self.inline_snippets)
+        self.inline_snippets = load_inline_snippets()
+        self._refresh_inline_snippet_combo()
+        titles = [item.get('title', '') for item in self.inline_snippets]
+        if self.inline_snippet_var is not None:
+            self.inline_snippet_var.set(titles[0] if titles else '')
+        if self.inline_title_var is not None:
+            self.inline_title_var.set('')
+        self._append_router_log(self._current_router(), f'INLINE: đã xóa preset "{title}"')
 
     def _current_router(self):
         idx = self.router_tabs.index(self.router_tabs.select())
