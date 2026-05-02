@@ -204,11 +204,12 @@ local function inputText(text)
  sleep(1000)
 end
 
-local function tapLoop60s(x, y)
- local startAt = os.time()
- while os.time() - startAt < 60 do
+local function tapLoopSeconds(x, y, sec)
+ while sec > 0 do
+  sys.toast("Tap " .. tostring(x) .. "," .. tostring(y) .. " " .. tostring(sec) .. "s", 0)
   touch.tap(x, y)
-  sleep(500)
+  sleep(1000)
+  sec = sec - 1
  end
 end
 
@@ -229,7 +230,7 @@ local function runBackupManagerTail()
  countdown("Đóng TikTok", 2)
  closeAppManager()
  openAppManager()
- waitImage(BACKUPSAPP_IMG, 0, "")
+ waitImage(BACKUPSAPP_IMG, 0, "Đợi Backupsapp")
  tapImageCenter(TIKTOKBUP_IMG, 82, 60, "Tìm tiktokbup")
  countdown("Sau tap tiktokbup", 2)
  touch.tap(345, 477)
@@ -299,7 +300,7 @@ local function runStage7()
   inputText(createRandomName19())
   touch.tap(591, 819)
   countdown("Sau tap 591,819", 3)
-  tapLoop60s(680, 1286)
+  tapLoopSeconds(680, 1286, 30)
   runBackupManagerTail()
  end
 
