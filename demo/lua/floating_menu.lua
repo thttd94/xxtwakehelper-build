@@ -4,15 +4,11 @@ local file = require("file")
 local webview = require("webview")
 
 local TOUCH_ID_IMG = "/var/mobile/Media/1ferver/lua/examples/touchID.png"
-while true do
-    local x, y = screen.find_image(TOUCH_ID_IMG, 82, 0, 0, 750, 1334)
-    if x ~= -1 then
-        touch.tap(381, 792)
-        sys.toast("Tapped Touch ID", 1)
-        sys.msleep(1000)
-        break
-    end
-    sys.msleep(300)
+local touch_id_x, touch_id_y = screen.find_image(TOUCH_ID_IMG, 82, 0, 0, 750, 1334)
+if touch_id_x ~= -1 then
+    touch.tap(381, 792)
+    sys.toast("Tapped Touch ID", 1)
+    sys.msleep(1000)
 end
 
 local BID_TIKTOK = "com.ss.iphone.ugc.Ame"
