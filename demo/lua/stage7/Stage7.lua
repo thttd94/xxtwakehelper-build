@@ -81,11 +81,15 @@ local function waitImage(img, timeoutSec, label)
  return false, -1, -1
 end
 
-local function waitAnyImage(imgList, timeoutSec, label)
+local function waitAnyImage(imgList, timeoutSec, label, x1, y1, x2, y2)
+ x1 = x1 or 0
+ y1 = y1 or 0
+ x2 = x2 or 750
+ y2 = y2 or 1334
  local startAt = os.time()
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
   for i = 1, #imgList do
-   local ok, x, y = findImage(imgList[i], 82, 0, 0, 750, 1334)
+   local ok, x, y = findImage(imgList[i], 82, x1, y1, x2, y2)
    if ok then return true, x, y, imgList[i] end
   end
   sleep(500)
@@ -214,13 +218,14 @@ local function runStage7()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  countdown("Sau countt", 5)
 
- waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 0, "")
- swipeDownAt(427, 892)
- swipeDownAt(566, 913)
- countdown("Trước vuốt 153,898", 2)
- swipeDownAt(153, 898)
-
- randomDelayCountdown(1, 300)
+ local birthdayOk = waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 60, "", 38, 473, 681, 632)
+ if birthdayOk then
+  swipeDownAt(427, 892)
+  swipeDownAt(566, 913)
+  countdown("Trước vuốt 153,898", 2)
+  swipeDownAt(153, 898)
+  randomDelayCountdown(1, 300)
+ end
  tapPinkOrSwipeDown()
 
  waitImage(CREATNAME_IMG, 0, "")
