@@ -12,7 +12,7 @@ local WELLCOM_IMG = RES_DIR .. "wellcom.png"
 local INDERSTAND_IMG = RES_DIR .. "inderstand.png"
 
 -- Link mở TikTok. Nếu anh có link cụ thể khác thì đổi đúng dòng này.
-local TIKTOK_OPEN_URL = "snssdk1233://"
+local TIKTOK_OPEN_URL = "https://accounts.google.com/signin"
 
 local __last_status = ""
 local __last_status_at = 0
@@ -187,7 +187,7 @@ function tapReturn()
 end
 
 function swipeDownFrom614119()
- phase("Vuốt xuống tìm sign")
+ phase("Vuốt xuống trước sign")
  touch.down(1, 614, 119)
  sleep(800)
  touch.move(1, 614, 720)
@@ -196,8 +196,10 @@ function swipeDownFrom614119()
  waitPhase(1000)
 end
 
+-- Chỉ dùng trước lúc nhập input lần đầu.
+-- Sau khi thấy sign.png và bắt đầu nhập input thì không check/vuốt xuống sign nữa.
 function waitSign()
- phase("Đợi sign.png")
+ phase("Đợi sign.png trước input 1")
  local lastSwipeAt = os.time()
  while true do
   handleBluePoint()
@@ -274,7 +276,8 @@ function runStage6()
  app.open_url(TIKTOK_OPEN_URL)
  waitPhase(5000)
 
- -- Bước 1: đợi sign.png, nếu chưa thấy thì 60s vuốt xuống một lần
+ -- Bước 1: chỉ ở đoạn này mới đợi sign.png và 60s vuốt xuống một lần nếu chưa thấy.
+ -- Qua tới nhập input lần đầu thì tuyệt đối không check/vuốt xuống sign nữa.
  waitSign()
  phase("Dán trước dấu |")
  touch.tap(356, 527)
