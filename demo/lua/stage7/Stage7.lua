@@ -29,7 +29,6 @@ local SETNAME_IMG = RES_DIR .. "setname.png"
 local PASTE_IMG = RES_DIR .. "paste.png"
 local TIKTOK_ROW_IMG = RES_DIR .. "tiktok_row.png"
 local TIKTOK_BACKUP_IMG = RES_DIR .. "tiktok_backup.png"
-local TIKTOK_BACKUPDATA_IMG = RES_DIR .. "tiktok_backupData.png"
 local TIKTOK_BACKUPING_IMG = RES_DIR .. "tiktok_backuping.png"
 
 local function sleep(ms)
@@ -197,12 +196,14 @@ waitImageDisappear = function(img, timeoutSec, label, x1, y1, x2, y2)
 end
 
 local function swipeUpOnce()
- touch.down(1, 360, 1050)
- sleep(30)
- touch.move(1, 360, 820)
- sleep(30)
+ touch.down(1, 360, 1150)
+ sleep(300)
+ touch.move(1, 360, 950)
+ sleep(250)
+ touch.move(1, 360, 700)
+ sleep(250)
  touch.up(1)
- sleep(1000)
+ sleep(1200)
 end
 
 local function swipeDownAt(x, y)
@@ -290,7 +291,8 @@ local function runGroup3AppManagerBackupFlow()
  tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok", 0, 526, 512, 1171)
  swipeUpOnce()
  tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup", 0, 526, 512, 1171)
- tapImageCenter(TIKTOK_BACKUPDATA_IMG, 82, 30, "Xác nhận data", 0, 526, 512, 1171)
+ touch.tap(387, 1137)
+ countdown("Sau tap xác nhận backup", 1)
  waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 526, 512, 1171)
  waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 526, 512, 1171)
 end
