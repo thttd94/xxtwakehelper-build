@@ -292,8 +292,8 @@ local function runStage7()
   countdown("Trước vuốt 153,898", 2)
   swipeDownAt(153, 898)
   randomDelayCountdown(1, 300)
+  tapPinkOrSwipeDown()
  end
- tapPinkOrSwipeDown()
 
  waitImage(CREATNAME_IMG, 0, "Đợi creatname")
  touch.tap(425, 516)
