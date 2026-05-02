@@ -266,26 +266,26 @@ local function runStage7()
 
  tapImageCenter(ADDACC_IMG, 82, 5, "Quét addacc")
 
- waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "")
+ waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "Đợi LogTTT/LogTTT2")
 
  tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg")
 
- local wantOk = waitImage(TIKTOKWANT_IMG, 30, "")
+ local wantOk = waitImage(TIKTOKWANT_IMG, 30, "Quét tiktokwant")
  if wantOk then
   touch.tap(502, 792)
   sleep(1000)
  end
 
- waitImage(CHOOSEAN_IMG, 0, "")
+ waitImage(CHOOSEAN_IMG, 0, "Đợi choosean")
  touch.tap(254, 758)
  sleep(1000)
 
- waitAnyImage({SINTOTT_IMG, SINTOTT2_IMG}, 0, "")
+ waitAnyImage({SINTOTT_IMG, SINTOTT2_IMG}, 0, "Đợi sintott/sintott2")
  swipeUpOnce()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  countdown("Sau countt", 5)
 
- local birthdayOk = waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 60, "", 38, 473, 681, 632)
+ local birthdayOk = waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 60, "Quét birthday/birthday1", 38, 473, 681, 632)
  if birthdayOk then
   swipeDownAt(427, 892)
   swipeDownAt(566, 913)
@@ -295,7 +295,7 @@ local function runStage7()
  end
  tapPinkOrSwipeDown()
 
- waitImage(CREATNAME_IMG, 0, "")
+ waitImage(CREATNAME_IMG, 0, "Đợi creatname")
  touch.tap(425, 516)
  countdown("Sau tap ô tên", 1)
  inputText(createRandomName19())
