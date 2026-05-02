@@ -181,9 +181,20 @@ function pasteText(text)
  key.send_text(text)
 end
 
-function tapReturn()
+function tapReturn(label)
+ phase(label or "Bấm return")
  touch.tap(658, 1289)
+ waitPhase(3000)
+ return true
+end
+
+function tapFieldAndPaste(x, y, text, label)
+ phase(label)
+ touch.tap(x, y)
+ waitPhase(1000)
+ pasteText(text)
  waitPhase(1500)
+ return true
 end
 
 function swipeDownFrom614119()
@@ -278,24 +289,22 @@ function runStage6()
 
  -- Bước 1: chỉ ở đoạn này mới đợi sign.png và 60s vuốt xuống một lần nếu chưa thấy.
  -- Qua tới nhập input lần đầu thì tuyệt đối không check/vuốt xuống sign nữa.
+ phase("Bước 1: chờ sign")
  waitSign()
- phase("Dán trước dấu |")
- touch.tap(356, 527)
- waitPhase(500)
- pasteText(beforePipe)
- waitPhase(500)
- tapReturn()
+ tapFieldAndPaste(356, 527, beforePipe, "Bước 1: dán trước dấu |")
+ tapReturn("Bước 1: bấm return lần 1")
+ waitPhase(2000)
 
- -- Bước 2: đợi wellcom.png, dán nội dung sau dấu |
+ -- Bước 2: đợi wellcom.png, dán nội dung sau dấu |, bắt buộc bấm return xong mới sang bước 3.
+ phase("Bước 2: chờ wellcom")
  waitWellcom()
- phase("Dán sau dấu |")
- touch.tap(445, 638)
- waitPhase(500)
- pasteText(afterPipe)
- waitPhase(500)
- tapReturn()
+ tapFieldAndPaste(445, 638, afterPipe, "Bước 2: dán sau dấu |")
+ tapReturn("Bước 2: bấm return lần 2")
+ phase("Bước 2: đã bấm return lần 2")
+ waitPhase(5000)
 
- -- Bước 3: vuốt lên chậm cho tới khi thấy inderstand.png
+ -- Bước 3: chỉ bắt đầu sau khi bước 2 đã dán input lần 2 và bấm return lần 2 xong.
+ phase("Bước 3: tìm inderstand")
  swipeUpUntilInderstand()
 
  phase("Stage 6 xong")
