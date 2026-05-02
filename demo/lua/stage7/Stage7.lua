@@ -15,6 +15,7 @@ local COUNTWGG1_IMG = RES_DIR .. "Countwgg1.png"
 local TIKTOKWANT_IMG = RES_DIR .. "tiktokwant.png"
 local CHOOSEAN_IMG = RES_DIR .. "choosean.png"
 local SINTOTT_IMG = RES_DIR .. "sintott.png"
+local SINTOTT2_IMG = RES_DIR .. "sintott2.png"
 local COUNTT_IMG = RES_DIR .. "countt.png"
 local BIRTHDAY_IMG = RES_DIR .. "birthday.png"
 local BIRTHDAY1_IMG = RES_DIR .. "birthday1.png"
@@ -208,7 +209,7 @@ local function runStage7()
  touch.tap(254, 758)
  sleep(1000)
 
- waitImage(SINTOTT_IMG, 0, "")
+ waitAnyImage({SINTOTT_IMG, SINTOTT2_IMG}, 0, "")
  swipeUpOnce()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  countdown("Sau countt", 5)
