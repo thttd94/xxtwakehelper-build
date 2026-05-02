@@ -10,6 +10,7 @@ local INPUT_PATH = RES_DIR .. "input.txt"
 local SIGN_IMG = RES_DIR .. "sign.png"
 local WELLCOM_IMG = RES_DIR .. "wellcom.png"
 local INDERSTAND_IMG = RES_DIR .. "inderstand.png"
+local NOTNOW_IMG = RES_DIR .. "notnow.png"
 
 -- Link mở TikTok. Nếu anh có link cụ thể khác thì đổi đúng dòng này.
 local TIKTOK_OPEN_URL = "https://accounts.google.com/signin"
@@ -65,15 +66,11 @@ function findImage(img, sim, x1, y1, x2, y2)
  return false, -1, -1
 end
 
-function handleBluePoint()
- local x, y = screen.find_color({
-  {302,1252,0x007aff},
-  {353,1256,0x007aff},
-  {439,1257,0x007aff},
-  {393,1268,0x007aff},
- }, 95, 0, 0, 0, 0)
- if x ~= -1 then
-  phase("Tạm dừng bấm điểm xanh")
+function handleNotNow()
+ local ok, x, y = findImage(NOTNOW_IMG, 82, 0, 0, 750, 1334)
+ if ok then
+  phase("Tạm dừng bấm notnow")
+  sleep(2000)
   touch.tap(x, y)
   sleep(1000)
   return true
@@ -85,7 +82,7 @@ function waitPhase(ms)
  local remain = ms
  local lastShown = -1
  while remain > 0 do
-  handleBluePoint()
+  handleNotNow()
   local sec = math.ceil(remain / 1000)
   if sec ~= lastShown then
    phaseProgress(sec)
@@ -213,7 +210,7 @@ function waitSign()
  phase("Đợi sign.png trước input 1")
  local lastSwipeAt = os.time()
  while true do
-  handleBluePoint()
+  handleNotNow()
   local ok, x, y = findImage(SIGN_IMG, 82, 0, 0, 750, 1334)
   if ok then
    phase("Thấy sign.png")
@@ -232,7 +229,7 @@ end
 function waitWellcom()
  phase("Đợi wellcom.png")
  while true do
-  handleBluePoint()
+  handleNotNow()
   local ok, x, y = findImage(WELLCOM_IMG, 82, 0, 0, 750, 1334)
   if ok then
    phase("Thấy wellcom.png")
@@ -256,7 +253,7 @@ end
 function swipeUpUntilInderstand()
  phase("Tìm inderstand.png")
  while true do
-  handleBluePoint()
+  handleNotNow()
   local ok, x, y = findImage(INDERSTAND_IMG, 82, 0, 0, 750, 1334)
   if ok then
    phase("Thấy inderstand.png")
