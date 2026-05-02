@@ -50,6 +50,17 @@ local function countdown(label, sec)
  end
 end
 
+local function countdownKeepTikTok(label, sec)
+ while sec > 0 do
+  showProgress(label, sec)
+  if app.front_bid() ~= TIKTOK_BUNDLE then
+   app.run(TIKTOK_BUNDLE)
+  end
+  sleep(1000)
+  sec = sec - 1
+ end
+end
+
 local function findImage(img, sim, x1, y1, x2, y2)
  sim = sim or 82
  x1 = x1 or 0
@@ -309,7 +320,7 @@ local function runStage7()
  countdown("Đóng TikTok", 2)
 
  app.run(TIKTOK_BUNDLE)
- countdown("Mở TikTok", 30)
+ countdownKeepTikTok("Mở TikTok", 30)
 
  touch.tap(674, 1281)
  countdown("Sau tap 674,1281", 20)
