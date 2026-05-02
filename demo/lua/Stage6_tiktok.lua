@@ -171,8 +171,8 @@ function runActiveXXTE()
   end
  end
 
- sys.toast("Load cookies xong", 1)
- waitPhase(1000)
+ sys.toast("Load cookies xong", 0)
+ waitPhase(5000)
  return true
 end
 
