@@ -305,11 +305,13 @@ local function runStage7()
   sys.toast("Tiếp: tap 591,819", 0)
   touch.tap(591, 819)
   countdown("Sau tap 591,819", 3)
-  sys.toast("Tiếp: tap 680,1286", 0)
-  tapLoopSeconds(680, 1286, 30)
-  sys.toast("Tiếp: AppManager backup", 0)
-  runBackupManagerTail()
  end
+
+ countdown("Trước tap 680,1286", 3)
+ sys.toast("Tiếp: tap 680,1286", 0)
+ tapLoopSeconds(680, 1286, 30)
+ sys.toast("Tiếp: AppManager backup", 0)
+ runBackupManagerTail()
 
  sys.toast("Stage 7 hoàn thành", 1)
  return true
