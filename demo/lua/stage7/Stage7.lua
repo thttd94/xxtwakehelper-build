@@ -20,6 +20,8 @@ local SINTOTT2_IMG = RES_DIR .. "sintott2.png"
 local COUNTT_IMG = RES_DIR .. "countt.png"
 local BIRTHDAY_IMG = RES_DIR .. "birthday.png"
 local BIRTHDAY1_IMG = RES_DIR .. "birthday1.png"
+local BIRTHDAY2_IMG = RES_DIR .. "birthday2.png"
+local BIRTHDAY3_IMG = RES_DIR .. "birthday3.png"
 local CREATNAME_IMG = RES_DIR .. "creatname.png"
 local BACKUPSAPP_IMG = RES_DIR .. "Backupsapp.png"
 local TIKTOKBUP_IMG = RES_DIR .. "tiktokbup.png"
@@ -316,6 +318,42 @@ local function tapPinkOrSwipeDown()
  return false
 end
 
+local function hasBirthdayColor()
+ local x, y = screen.find_color({
+  {100,161,0x000000},
+  {327,269,0x000000},
+  {606,205,0x78ebfa},
+  {659,237,0x161823},
+  {614,1206,0xffabbb},
+ }, 95, 0, 0, 0, 0)
+ if x ~= -1 then return true, x, y end
+ return false, -1, -1
+end
+
+local function waitBirthdayAny(timeoutSec)
+ local imgs = {BIRTHDAY_IMG, BIRTHDAY1_IMG, BIRTHDAY2_IMG, BIRTHDAY3_IMG}
+ local startAt = os.time()
+ local lastShown = -1
+ while os.time() - startAt < timeoutSec do
+  local remain = timeoutSec - (os.time() - startAt)
+  if remain ~= lastShown then
+   showProgress("Quét birthday/birthday1/2/3", remain)
+   lastShown = remain
+  end
+  for i = 1, #imgs do
+   local img = imgs[i]
+   if file.exists(img) then
+    local ok, x, y = findImage(img, 82, 38, 547, 728, 675)
+    if ok then return true, x, y, img end
+   end
+  end
+  local colorOk, cx, cy = hasBirthdayColor()
+  if colorOk then return true, cx, cy, "color" end
+  sleep(500)
+ end
+ return false, -1, -1, nil
+end
+
 local function runStage7()
  app.quit(TIKTOK_BUNDLE)
  countdown("Đóng TikTok", 2)
@@ -349,7 +387,7 @@ local function runStage7()
  tapImageCenter(COUNTT_IMG, 82, 60, "Tìm countt")
  countdown("Sau countt", 5)
 
- local birthdayOk = waitAnyImage({BIRTHDAY_IMG, BIRTHDAY1_IMG}, 30, "Quét birthday/birthday1", 38, 473, 681, 632)
+ local birthdayOk = waitBirthdayAny(30)
  if birthdayOk then
   swipeDownAt(427, 892)
   swipeDownAt(566, 913)
