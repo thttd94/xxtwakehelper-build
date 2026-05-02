@@ -70,6 +70,8 @@ local function imageCenter(imgPath, x, y)
  return math.floor(x + (w / 2)), math.floor(y + (h / 2))
 end
 
+local waitImageDisappear
+
 local function tapImageCenter(img, sim, timeoutSec, label, x1, y1, x2, y2, offsetX, offsetY)
  if not file.exists(img) then return false, -1, -1 end
  x1 = x1 or 0
@@ -160,7 +162,7 @@ local function tapAnyImageCenter(imgList, timeoutSec, label)
  return false, -1, -1, nil
 end
 
-local function waitImageDisappear(img, timeoutSec, label, x1, y1, x2, y2)
+waitImageDisappear = function(img, timeoutSec, label, x1, y1, x2, y2)
  if not file.exists(img) then return true end
  x1 = x1 or 0
  y1 = y1 or 0
