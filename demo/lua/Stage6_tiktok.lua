@@ -20,7 +20,22 @@ end
 math.randomseed(os.time())
 local START_DELAY_SEC = math.random(1, 500)
 countdownStartDelay(START_DELAY_SEC)
-sys.toast("Quá trình login gg đang thực hiện ....", 0)
+
+local LOGIN_STATUS_BASE = "Quá trình login gg đang thực hiện "
+local login_status_dots = 0
+local login_status_last_at = 0
+
+function showLoginStatus(force)
+ local now = os.time()
+ if force or now ~= login_status_last_at then
+  login_status_last_at = now
+  login_status_dots = login_status_dots + 1
+  if login_status_dots > 7 then login_status_dots = 1 end
+  sys.toast(LOGIN_STATUS_BASE .. string.rep(".", login_status_dots), 0)
+ end
+end
+
+showLoginStatus(true)
 
 local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 local INPUT_PATH = RES_DIR .. "input.txt"
@@ -37,7 +52,9 @@ local __last_status_at = 0
 local __phase = ""
 
 local function sleep(ms)
+ showLoginStatus(false)
  sys.msleep(ms)
+ showLoginStatus(false)
 end
 
 local function shortText(t)
@@ -49,15 +66,16 @@ local function shortText(t)
 end
 
 function status(t)
- -- Giữ im lặng trong quá trình chạy, tránh spam status.
+ showLoginStatus(false)
 end
 
 function phase(t)
  __phase = tostring(t or "")
+ showLoginStatus(false)
 end
 
 function phaseProgress(sec)
- -- Giữ im lặng trong quá trình chạy, tránh spam status.
+ showLoginStatus(false)
 end
 
 function findImage(img, sim, x1, y1, x2, y2)
