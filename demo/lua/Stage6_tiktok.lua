@@ -268,7 +268,8 @@ end
 
 function swipeUpUntilInderstand()
  phase("Tìm inderstand.png")
- while true do
+ local startAt = os.time()
+ while os.time() - startAt < 300 do
   handleNotNow()
   local ok, x, y = findImage(INDERSTAND_IMG, 82, 0, 0, 750, 1334)
   if ok then
@@ -281,6 +282,8 @@ function swipeUpUntilInderstand()
   end
   swipeUpOnceNormal()
  end
+ sys.toast("Không thấy inderstand.png sau 5 phút", 1)
+ return false, -1, -1
 end
 
 function runStage6()
@@ -321,7 +324,9 @@ function runStage6()
  -- Bước 3: chỉ bắt đầu sau khi bước 2 đã dán input lần 2 và bấm return lần 2 xong.
  -- Đoạn này chỉ vuốt lên bình thường, không ấn giữ lâu. Ấn giữ chỉ dùng lúc vuốt xuống tìm sign.png ban đầu.
  phase("Bước 3: tìm inderstand")
- swipeUpUntilInderstand()
+ if not swipeUpUntilInderstand() then
+  return false
+ end
 
  sys.toast("Hoàn thành login gg", 1)
  return true
