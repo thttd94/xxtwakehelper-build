@@ -12,7 +12,7 @@ $python = @('pythonw.exe', 'pyw.exe', 'python.exe', 'py.exe') | Where-Object {
 } | Select-Object -First 1
 
 if (-not $python) {
-  [System.Windows.Forms.MessageBox]::Show('Không tìm thấy Python để chạy 9Router live overlay.', '9Router Overlay') | Out-Null
+  Write-Host 'Python not found for 9Router live overlay.'
   exit 1
 }
 
