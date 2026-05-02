@@ -70,8 +70,14 @@ local function imageCenter(imgPath, x, y)
  return math.floor(x + (w / 2)), math.floor(y + (h / 2))
 end
 
-local function tapImageCenter(img, sim, timeoutSec, label)
+local function tapImageCenter(img, sim, timeoutSec, label, x1, y1, x2, y2, offsetX, offsetY)
  if not file.exists(img) then return false, -1, -1 end
+ x1 = x1 or 0
+ y1 = y1 or 0
+ x2 = x2 or 750
+ y2 = y2 or 1334
+ offsetX = offsetX or 0
+ offsetY = offsetY or 0
  local startAt = os.time()
  local lastShown = -1
  while os.time() - startAt < timeoutSec do
@@ -80,20 +86,23 @@ local function tapImageCenter(img, sim, timeoutSec, label)
    showProgress(label or "Quét ảnh", remain)
    lastShown = remain
   end
-  local ok, x, y = findImage(img, sim or 82, 0, 0, 750, 1334)
+  local ok, x, y = findImage(img, sim or 82, x1, y1, x2, y2)
   if ok then
-   local cx, cy = imageCenter(img, x, y)
-   touch.tap(cx, cy)
-   sleep(1000)
-   return true, cx, cy
+   touch.tap(x + offsetX, y + offsetY)
+   sleep(1200)
+   return true, x, y
   end
-  sleep(500)
+  sleep(300)
  end
  return false, -1, -1
 end
 
-local function waitImage(img, timeoutSec, label)
+local function waitImage(img, timeoutSec, label, x1, y1, x2, y2)
  if not file.exists(img) then return false, -1, -1 end
+ x1 = x1 or 0
+ y1 = y1 or 0
+ x2 = x2 or 750
+ y2 = y2 or 1334
  local startAt = os.time()
  local lastShown = -1
  while timeoutSec <= 0 or os.time() - startAt < timeoutSec do
@@ -104,9 +113,9 @@ local function waitImage(img, timeoutSec, label)
    showProgress(label or "Chờ ảnh", shown)
    lastShown = shown
   end
-  local ok, x, y = findImage(img, 82, 0, 0, 750, 1334)
+  local ok, x, y = findImage(img, 82, x1, y1, x2, y2)
   if ok then return true, x, y end
-  sleep(500)
+  sleep(300)
  end
  return false, -1, -1
 end
@@ -149,8 +158,12 @@ local function tapAnyImageCenter(imgList, timeoutSec, label)
  return false, -1, -1, nil
 end
 
-local function waitImageDisappear(img, timeoutSec, label)
+local function waitImageDisappear(img, timeoutSec, label, x1, y1, x2, y2)
  if not file.exists(img) then return true end
+ x1 = x1 or 0
+ y1 = y1 or 0
+ x2 = x2 or 750
+ y2 = y2 or 1334
  local startAt = os.time()
  local lastShown = -1
  while os.time() - startAt < timeoutSec do
@@ -159,7 +172,7 @@ local function waitImageDisappear(img, timeoutSec, label)
    showProgress(label or "Đợi ảnh biến mất", remain)
    lastShown = remain
   end
-  local ok = findImage(img, 82, 0, 0, 750, 1334)
+  local ok = findImage(img, 82, x1, y1, x2, y2)
   if not ok then return true end
   sleep(500)
  end
@@ -249,12 +262,12 @@ local function runGroup3AppManagerBackupFlow()
  countdown("Đóng TikTok", 2)
  closeAppManager()
  openAppManager()
- tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok")
+ tapImageCenter(TIKTOK_ROW_IMG, 82, 30, "Tìm TikTok", 0, 150, 750, 1100)
  swipeUpOnce()
- tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup")
- tapImageCenter(TIKTOK_BACKUPDATA_IMG, 82, 30, "Xác nhận data")
- waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup")
- waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup")
+ tapImageCenter(TIKTOK_BACKUP_IMG, 82, 30, "Tìm Backup", 0, 150, 750, 1334)
+ tapImageCenter(TIKTOK_BACKUPDATA_IMG, 82, 30, "Xác nhận data", 0, 150, 750, 1334)
+ waitImage(TIKTOK_BACKUPING_IMG, 30, "Đợi popup backup", 0, 150, 750, 1334)
+ waitImageDisappear(TIKTOK_BACKUPING_IMG, 1800, "Backup", 0, 150, 750, 1334)
 end
 
 local function runBackupManagerTail()
