@@ -88,8 +88,9 @@ local function tapImageCenter(img, sim, timeoutSec, label, x1, y1, x2, y2, offse
   end
   local ok, x, y = findImage(img, sim or 82, x1, y1, x2, y2)
   if ok then
+   countdown("Thấy ảnh, chờ tap", 2)
    touch.tap(x + offsetX, y + offsetY)
-   sleep(1200)
+   waitImageDisappear(img, 30, label or "Đợi ảnh mất", x1, y1, x2, y2)
    return true, x, y
   end
   sleep(300)
@@ -151,8 +152,9 @@ local function tapAnyImageCenter(imgList, timeoutSec, label)
  local ok, x, y, img = waitAnyImage(imgList, timeoutSec, label)
  if ok then
   local cx, cy = imageCenter(img, x, y)
+  countdown("Thấy ảnh, chờ tap", 2)
   touch.tap(cx, cy)
-  sleep(1000)
+  waitImageDisappear(img, 30, label or "Đợi ảnh mất")
   return true, cx, cy, img
  end
  return false, -1, -1, nil
@@ -316,6 +318,7 @@ local function runStage7()
  waitAnyImage({LOGTTT_IMG, LOGTTT2_IMG}, 0, "Đợi LogTTT/LogTTT2")
 
  tapAnyImageCenter({COUNTWGG_IMG, COUNTWGG1_IMG}, 60, "Tìm Countwgg")
+ randomDelayCountdown(10, 60)
 
  local wantOk = waitImage(TIKTOKWANT_IMG, 30, "Quét tiktokwant")
  if wantOk then
