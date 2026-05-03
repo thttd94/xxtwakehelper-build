@@ -266,6 +266,7 @@ def ensure_router_defaults(router):
     router.setdefault('ui_mode', 'LIST MAY')
     router.setdefault('ui_group', 'all')
     router.setdefault('ui_list', router.get('ui_group', 'all') or 'all')
+    router.setdefault('machine_list_history', [])
     router.setdefault('remote_select', 'all')
     router.setdefault('group3_app', 'TikTok Lite')
     router.setdefault('inline_script', 'device = require("device")\nsys = require("sys")\n\nwhile (device.is_screen_locked()) do\n    device.unlock_screen()\n    sys.msleep(1000)\nend\n\nsys.toast("Screen unlocked, script starting")\n')
@@ -427,6 +428,7 @@ class XXTouchOnlyDemo(tk.Tk):
         list_entry.pack(side='left', padx=(0, 8))
         router['_ui_list_widget'] = list_entry
         list_entry.bind('<KeyRelease>', lambda _e: self._save_router_machine_ui(router))
+        ttk.Button(row1, text='Lịch sử hoạt động', command=lambda r=router: self._open_machine_list_history(r)).pack(side='left', padx=(0, 8))
         router['ui_mode'] = 'LIST MAY'
         self.after(50, lambda: self._save_router_machine_ui(router))
 
@@ -1566,6 +1568,82 @@ class XXTouchOnlyDemo(tk.Tk):
         router['ui_list'] = value
         save_router_config(self.routers)
 
+    def _current_machine_list_value(self, router):
+        list_widget = router.get('_ui_list_widget')
+        value = list_widget.get().strip() if list_widget else str(router.get('ui_list', router.get('ui_group', ''))).strip()
+        return value or 'all'
+
+    def _record_machine_list_history(self, router, action_name):
+        value = self._current_machine_list_value(router)
+        history = router.setdefault('machine_list_history', [])
+        if history and str(history[-1].get('list', '')).strip() == value:
+            return
+        from datetime import datetime
+        history.append({
+            'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'list': value,
+            'action': str(action_name or '').strip(),
+        })
+        if len(history) > 500:
+            del history[:-500]
+        save_router_config(self.routers)
+
+    def _load_machine_list_from_history(self, router, value, popup=None):
+        value = str(value or '').strip() or 'all'
+        widget = router.get('_ui_list_widget')
+        if widget:
+            widget.delete(0, 'end')
+            widget.insert(0, value)
+        router['ui_mode'] = 'LIST MAY'
+        router['ui_group'] = value
+        router['ui_list'] = value
+        save_router_config(self.routers)
+        self._append_router_log(router, f'LỊCH SỬ: nạp lại list máy {value}')
+        if popup:
+            try:
+                popup.lift()
+            except Exception:
+                pass
+
+    def _open_machine_list_history(self, router):
+        popup = tk.Toplevel(self)
+        popup.title(f'Lịch sử hoạt động - {router.get("name", "Router")}')
+        popup.geometry('780x520')
+        popup.configure(bg='#111111')
+        ttk.Label(popup, text='Lịch sử List Máy', style='Title.TLabel').pack(anchor='w', padx=14, pady=(14, 6))
+        ttk.Label(popup, text='Chỉ ghi thêm dòng mới khi bấm thao tác và list máy khác lần ghi gần nhất.', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 10))
+
+        shell = tk.Frame(popup, bg='#111111')
+        shell.pack(fill='both', expand=True, padx=14, pady=(0, 14))
+        canvas = tk.Canvas(shell, bg='#111111', highlightthickness=0)
+        scroll = ttk.Scrollbar(shell, orient='vertical', command=canvas.yview)
+        inner = tk.Frame(canvas, bg='#111111')
+        inner.bind('<Configure>', lambda _e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.create_window((0, 0), window=inner, anchor='nw')
+        canvas.configure(yscrollcommand=scroll.set)
+        canvas.pack(side='left', fill='both', expand=True)
+        scroll.pack(side='right', fill='y')
+
+        header = tk.Frame(inner, bg='#1f2937')
+        header.pack(fill='x', pady=(0, 4))
+        for text, width in [('Ngày giờ', 20), ('Số list máy thực hiện', 38), ('Thao tác', 18), ('', 10)]:
+            tk.Label(header, text=text, width=width, anchor='w', bg='#1f2937', fg='white', font=('Arial', 10, 'bold')).pack(side='left', padx=4, pady=6)
+
+        history = list(router.get('machine_list_history') or [])
+        if not history:
+            tk.Label(inner, text='Chưa có lịch sử.', bg='#111111', fg='#dddddd', anchor='w').pack(fill='x', pady=10)
+            return
+        for item in reversed(history):
+            row = tk.Frame(inner, bg='#ffffff')
+            row.pack(fill='x', pady=2)
+            tm = str(item.get('time', ''))
+            value = str(item.get('list', ''))
+            action = str(item.get('action', ''))
+            tk.Label(row, text=tm, width=20, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
+            tk.Label(row, text=value, width=38, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
+            tk.Label(row, text=action, width=18, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
+            tk.Button(row, text='Nạp lại', command=lambda v=value, p=popup: self._load_machine_list_from_history(router, v, p)).pack(side='left', padx=4, pady=3)
+
     def _selected_rows(self, router):
         rows = router.get('rows', [])
         list_widget = router.get('_ui_list_widget')
@@ -2449,6 +2527,7 @@ class XXTouchOnlyDemo(tk.Tk):
         if not rows:
             self._append_router_log(router, f'{action_name}: không có máy nào được chọn')
             return
+        self._record_machine_list_history(router, action_name)
         self._append_router_log(router, f'{action_name}: bắt đầu chạy đồng thời {len(rows)} máy')
 
         def worker():
