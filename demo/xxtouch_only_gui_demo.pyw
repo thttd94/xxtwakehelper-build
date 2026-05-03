@@ -759,9 +759,9 @@ class XXTouchOnlyDemo(tk.Tk):
         status.pack(anchor='w', pady=(0, 8))
         self.router_uid_status_labels[id(router)] = status
 
-        columns = ('machine', 'ip', 'docs_uid', 'avatar_uid', 'uid', 'status')
-        headings = {'machine': 'Máy', 'ip': 'IP', 'docs_uid': 'Documents UID', 'avatar_uid': 'Avatar UID', 'uid': 'UID nếu khớp', 'status': 'Trạng thái'}
-        widths = {'machine': 90, 'ip': 140, 'docs_uid': 190, 'avatar_uid': 190, 'uid': 190, 'status': 260}
+        columns = ('machine', 'ip', 'docs_uid', 'avatar_uid', 'uid', 'user', 'status')
+        headings = {'machine': 'Máy', 'ip': 'IP', 'docs_uid': 'Documents UID', 'avatar_uid': 'Avatar UID', 'uid': 'UID nếu khớp', 'user': 'USER', 'status': 'Trạng thái'}
+        widths = {'machine': 90, 'ip': 140, 'docs_uid': 190, 'avatar_uid': 190, 'uid': 190, 'user': 180, 'status': 260}
         table_wrap = ttk.Frame(parent, style='Card.TFrame')
         table_wrap.pack(fill='both', expand=True)
         tree = ttk.Treeview(table_wrap, columns=columns, show='headings', height=18)
@@ -769,7 +769,7 @@ class XXTouchOnlyDemo(tk.Tk):
         hsb = ttk.Scrollbar(table_wrap, orient='horizontal', command=tree.xview)
         tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         for col in columns:
-            tree.heading(col, text=headings[col])
+            tree.heading(col, text=headings[col], command=lambda c=col, r=router: self._sort_uid_tree(r, c, False))
             tree.column(col, width=widths[col], anchor='center')
         tree.grid(row=0, column=0, sticky='nsew')
         vsb.grid(row=0, column=1, sticky='ns')
@@ -812,10 +812,48 @@ class XXTouchOnlyDemo(tk.Tk):
             uid = row.get('tiktok_uid', '')
             if uid:
                 ok += 1
-            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), row.get('tiktok_docs_uid', ''), row.get('tiktok_avatar_uid', ''), uid, row.get('tiktok_uid_status', 'Chưa quét')))
+            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), row.get('tiktok_docs_uid', ''), row.get('tiktok_avatar_uid', ''), uid, row.get('tiktok_user', ''), row.get('tiktok_uid_status', 'Chưa quét')))
         label = self.router_uid_status_labels.get(id(router))
         if label:
             label.config(text=f'Tổng: {len(router.get("rows", []))} máy | UID khớp: {ok}')
+
+    def _sort_uid_tree(self, router, column, reverse):
+        tree = self.router_uid_trees.get(id(router))
+        if tree is None:
+            return
+        items = [(tree.set(k, column), k) for k in tree.get_children('')]
+        items.sort(key=lambda x: str(x[0]).lower(), reverse=reverse)
+        for idx, (_val, k) in enumerate(items):
+            tree.move(k, '', idx)
+        tree.heading(column, command=lambda c=column, r=router, rev=not reverse: self._sort_uid_tree(r, c, rev))
+
+    def _resolve_tiktok_user_from_uid(self, uid):
+        uid = str(uid or '').strip()
+        if not uid:
+            return ''
+        try:
+            import re
+            import urllib.request
+            opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+            req = urllib.request.Request(
+                f'https://www.tiktok.com/@{uid}',
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                },
+            )
+            with opener.open(req, timeout=8) as resp:
+                final_url = resp.geturl() or ''
+                html = resp.read(200000).decode('utf-8', 'ignore')
+            for source in [final_url, html]:
+                m = re.search(r'tiktok\.com/@([A-Za-z0-9._-]+)', source)
+                if m:
+                    user = m.group(1).strip()
+                    if user and user != uid:
+                        return user
+            return ''
+        except Exception:
+            return ''
 
     def _scan_tiktok_uid_for_router(self, router):
         rows = list(router.get('rows', []))
@@ -827,6 +865,7 @@ class XXTouchOnlyDemo(tk.Tk):
             row['tiktok_docs_uid'] = ''
             row['tiktok_avatar_uid'] = ''
             row['tiktok_uid'] = ''
+            row['tiktok_user'] = ''
             row['tiktok_uid_status'] = 'Đang chờ'
         self.after(0, lambda r=router: self._refresh_uid_tree(r))
 
@@ -847,6 +886,7 @@ class XXTouchOnlyDemo(tk.Tk):
             row['tiktok_docs_uid'] = docs
             row['tiktok_avatar_uid'] = avatar
             row['tiktok_uid'] = uid
+            row['tiktok_user'] = self._resolve_tiktok_user_from_uid(uid) if uid else ''
             row['tiktok_uid_status'] = state
             row['updated'] = now_text()
             return row
@@ -870,6 +910,7 @@ class XXTouchOnlyDemo(tk.Tk):
                     row['tiktok_docs_uid'] = ''
                     row['tiktok_avatar_uid'] = ''
                     row['tiktok_uid'] = ''
+                    row['tiktok_user'] = ''
                     row['tiktok_uid_status'] = 'LỖI: ' + str(e)
                     row['updated'] = now_text()
                     self.after(0, lambda r=router: self._refresh_uid_tree(r))
@@ -882,9 +923,9 @@ class XXTouchOnlyDemo(tk.Tk):
     def _write_uid_results_file(self, router):
         safe_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in str(router.get('name', 'router')))
         path = Path(__file__).with_name(f'tiktok_uid_results_{safe_name}.txt')
-        lines = ['machine|ip|documents_uid|avatar_uid|uid|status']
+        lines = ['machine|ip|documents_uid|avatar_uid|uid|user|status']
         for row in router.get('rows', []):
-            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_docs_uid', 'tiktok_avatar_uid', 'tiktok_uid', 'tiktok_uid_status']))
+            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_docs_uid', 'tiktok_avatar_uid', 'tiktok_uid', 'tiktok_user', 'tiktok_uid_status']))
         path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
         router['tiktok_uid_results_file'] = str(path)
         return path
