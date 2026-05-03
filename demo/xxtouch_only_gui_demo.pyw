@@ -2618,7 +2618,24 @@ class XXTouchOnlyDemo(tk.Tk):
 
         def delayed_task(row, delay_seconds):
             if delay_seconds > 0:
-                time.sleep(delay_seconds)
+                machine = str(row.get('machine', '?'))
+                row['network'] = 'Chờ Random'
+                row['note'] = f'Random Start còn {int(delay_seconds)}s'
+                row['updated'] = now_text()
+                self.after(0, lambda: self._refresh_router_devices(router))
+                self.after(0, lambda m=machine, d=int(delay_seconds): self._append_router_log(router, f'[{m}] {action_name}: Random Start chờ {d}s'))
+                remaining = int(delay_seconds)
+                while remaining > 0:
+                    step = 1 if remaining <= 10 else min(5, remaining)
+                    time.sleep(step)
+                    remaining -= step
+                    row['network'] = 'Chờ Random'
+                    row['note'] = f'Random Start còn {max(0, remaining)}s'
+                    row['updated'] = now_text()
+                    self.after(0, lambda: self._refresh_router_devices(router))
+                row['note'] = f'{action_name}: đang chạy'
+                row['updated'] = now_text()
+                self.after(0, lambda: self._refresh_router_devices(router))
             return task(row)
 
         def build_random_start_delays(total, max_delay):
