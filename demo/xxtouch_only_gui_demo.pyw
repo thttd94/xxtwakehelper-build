@@ -83,6 +83,38 @@ local function find_tiktok_container()
   return nil
 end
 
+local function read_user_from_file(path, uid)
+  if not file.exists(path) then return "" end
+  local data = file.reads(path)
+  if not data or data == "" then return "" end
+  local user = string.match(data, "tiktok%.com/@([A-Za-z0-9%._%-]+)[^\r\n]*share_author_id=" .. uid)
+  if user and user ~= uid then return user end
+  user = string.match(data, "tiktok%.com/@([A-Za-z0-9%._%-]+)")
+  if user and user ~= uid then return user end
+  return ""
+end
+
+local function find_user_local(container, uid)
+  if not uid or uid == "" then return "" end
+  local candidates = {
+    join(container, "Library/Preferences/com.ss.iphone.ugc.Ame.plist"),
+    join(container, "Library/passportStorage/manifest.sqlite-wal"),
+    join(container, "Library/passportStorage/manifest.sqlite"),
+    join(container, "Documents/AwemeIM.db"),
+    join(container, "Documents/AwemeIM-" .. uid .. ".db"),
+  }
+  for _, p in ipairs(candidates) do
+    local user = read_user_from_file(p, uid)
+    if user ~= "" then return user end
+  end
+  local passport_data = join(container, "Library/passportStorage/data")
+  for _, name in ipairs(list(passport_data)) do
+    local user = read_user_from_file(join(passport_data, name), uid)
+    if user ~= "" then return user end
+  end
+  return ""
+end
+
 file.writes(OUT, "")
 local container = find_tiktok_container()
 if not container then
@@ -122,6 +154,8 @@ write("AVATAR_UID=" .. avatar_uid)
 if docs_uid ~= "" and avatar_uid ~= "" and docs_uid == avatar_uid then
   write("MATCH=YES")
   write("UID=" .. docs_uid)
+  local user = find_user_local(container, docs_uid)
+  write("USER=" .. user)
 elseif docs_uid == "" and avatar_uid == "" then
   write("MATCH=NO")
   write("STATUS=NO_UID_FOLDERS")
@@ -789,6 +823,7 @@ class XXTouchOnlyDemo(tk.Tk):
         docs = data.get('DOCS_UID') or data.get('DOCUMENTS_UID_FOLDER') or ''
         avatar = data.get('AVATAR_UID') or data.get('AVATAR_UID_FOLDER') or ''
         uid = data.get('UID') or (docs if docs and docs == avatar else '')
+        user = data.get('USER', '')
         match = data.get('MATCH', '')
         status = data.get('STATUS', '')
         if uid and match == 'YES':
@@ -801,7 +836,7 @@ class XXTouchOnlyDemo(tk.Tk):
             state = 'KHÔNG TRÙNG NHAU'
         else:
             state = status or 'KHÔNG RÕ'
-        return docs, avatar, uid, state
+        return docs, avatar, uid, user, state
 
     def _refresh_uid_tree(self, router):
         tree = self.router_uid_trees.get(id(router))
@@ -937,11 +972,11 @@ class XXTouchOnlyDemo(tk.Tk):
             client.spawn(TIKTOK_UID_INLINE_LUA)
             time.sleep(1.2)
             text = client.download_text_file(TIKTOK_UID_RESULT_PATH)
-            docs, avatar, uid, state = self._parse_tiktok_uid_result(text)
+            docs, avatar, uid, user, state = self._parse_tiktok_uid_result(text)
             row['tiktok_docs_uid'] = docs
             row['tiktok_avatar_uid'] = avatar
             row['tiktok_uid'] = uid
-            row['tiktok_user'] = ''
+            row['tiktok_user'] = user
             row['tiktok_uid_status'] = state
             row['updated'] = now_text()
             return row
