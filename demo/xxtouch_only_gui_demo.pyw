@@ -15,6 +15,7 @@ from xxtouch_openapi_client import XXTouchOpenAPIClient, XXTouchOpenAPIError
 
 CONFIG_PATH = Path(__file__).with_name('xxtouch_router_config.json')
 LOG_PATH = Path(__file__).with_name('xxtouch_only_gui_demo.log')
+MACHINE_LIST_HISTORY_LOG_PATH = Path(__file__).with_name('xxtouch_machine_list_history.log')
 TXT_POOL_PATH = Path(__file__).with_name('xxtouch_txt_pool.json')
 INLINE_SNIPPETS_PATH = Path(__file__).with_name('xxtouch_inline_snippets.json')
 TIKTOK_UID_RESULT_PATH = '/var/mobile/Media/1ferver/tiktok_uid_folders.txt'
@@ -1579,14 +1580,48 @@ class XXTouchOnlyDemo(tk.Tk):
         if history and str(history[-1].get('list', '')).strip() == value:
             return
         from datetime import datetime
-        history.append({
+        item = {
             'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'list': value,
             'action': str(action_name or '').strip(),
-        })
+        }
+        history.append(item)
         if len(history) > 500:
             del history[:-500]
+        self._append_machine_list_history_log(router, item)
         save_router_config(self.routers)
+
+    def _append_machine_list_history_log(self, router, item):
+        try:
+            MACHINE_LIST_HISTORY_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            router_name = str(router.get('name', '?')) if isinstance(router, dict) else '?'
+            line = f"{item.get('time', '')} | {router_name} | {item.get('action', '')} | {item.get('list', '')}\n"
+            with MACHINE_LIST_HISTORY_LOG_PATH.open('a', encoding='utf-8') as f:
+                f.write(line)
+        except Exception:
+            pass
+
+    def _copy_machine_list_history_value(self, value):
+        value = str(value or '').strip()
+        if not value:
+            return
+        self._copy_to_clipboard(value)
+
+    def _show_machine_list_history_detail(self, value):
+        value = str(value or '').strip()
+        popup = tk.Toplevel(self)
+        popup.title('Chi tiết list máy')
+        popup.geometry('560x420')
+        popup.configure(bg='#111111')
+        ttk.Label(popup, text='Chi tiết list máy', style='Title.TLabel').pack(anchor='w', padx=14, pady=(14, 8))
+        text = tk.Text(popup, wrap='word', bg='#ffffff', fg='#111111', height=14)
+        text.pack(fill='both', expand=True, padx=14, pady=(0, 10))
+        text.insert('1.0', value)
+        text.config(state='disabled')
+        foot = ttk.Frame(popup, style='Card.TFrame')
+        foot.pack(fill='x', padx=14, pady=(0, 14))
+        ttk.Button(foot, text='Copy', command=lambda v=value: self._copy_to_clipboard(v)).pack(side='left')
+        ttk.Button(foot, text='Đóng', command=popup.destroy).pack(side='right')
 
     def _load_machine_list_from_history(self, router, value, popup=None):
         value = str(value or '').strip() or 'all'
@@ -1611,7 +1646,8 @@ class XXTouchOnlyDemo(tk.Tk):
         popup.geometry('780x520')
         popup.configure(bg='#111111')
         ttk.Label(popup, text='Lịch sử List Máy', style='Title.TLabel').pack(anchor='w', padx=14, pady=(14, 6))
-        ttk.Label(popup, text='Chỉ ghi thêm dòng mới khi bấm thao tác và list máy khác lần ghi gần nhất.', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 10))
+        ttk.Label(popup, text='Chỉ ghi thêm dòng mới khi bấm thao tác và list máy khác lần ghi gần nhất.', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 4))
+        ttk.Label(popup, text=f'Click list để copy, double-click để xem đầy đủ. File log: {MACHINE_LIST_HISTORY_LOG_PATH.name}', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 10))
 
         shell = tk.Frame(popup, bg='#111111')
         shell.pack(fill='both', expand=True, padx=14, pady=(0, 14))
@@ -1626,7 +1662,7 @@ class XXTouchOnlyDemo(tk.Tk):
 
         header = tk.Frame(inner, bg='#1f2937')
         header.pack(fill='x', pady=(0, 4))
-        for text, width in [('Ngày giờ', 20), ('Số list máy thực hiện', 38), ('Thao tác', 18), ('', 10)]:
+        for text, width in [('Ngày giờ', 20), ('Số list máy thực hiện', 46), ('Thao tác', 18), ('', 10)]:
             tk.Label(header, text=text, width=width, anchor='w', bg='#1f2937', fg='white', font=('Arial', 10, 'bold')).pack(side='left', padx=4, pady=6)
 
         history = list(router.get('machine_list_history') or [])
@@ -1640,7 +1676,11 @@ class XXTouchOnlyDemo(tk.Tk):
             value = str(item.get('list', ''))
             action = str(item.get('action', ''))
             tk.Label(row, text=tm, width=20, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
-            tk.Label(row, text=value, width=38, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
+            display_value = value if len(value) <= 58 else value[:55] + '...'
+            value_label = tk.Label(row, text=display_value, width=46, anchor='w', bg='#ffffff', fg='#111111', cursor='hand2')
+            value_label.pack(side='left', padx=4, pady=5)
+            value_label.bind('<Button-1>', lambda _e, v=value: self._copy_machine_list_history_value(v))
+            value_label.bind('<Double-Button-1>', lambda _e, v=value: self._show_machine_list_history_detail(v))
             tk.Label(row, text=action, width=18, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
             tk.Button(row, text='Nạp lại', command=lambda v=value, p=popup: self._load_machine_list_from_history(router, v, p)).pack(side='left', padx=4, pady=3)
 
