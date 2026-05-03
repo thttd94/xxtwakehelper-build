@@ -834,8 +834,31 @@ class XXTouchOnlyDemo(tk.Tk):
         tree = self.router_uid_trees.get(id(router))
         if tree is None:
             return
-        items = [(tree.set(k, column), k) for k in tree.get_children('')]
-        items.sort(key=lambda x: str(x[0]).lower(), reverse=reverse)
+
+        def sort_key(value):
+            text = str(value or '').strip()
+            if column == 'machine':
+                try:
+                    return (0, int(text))
+                except Exception:
+                    return (1, text.lower())
+            if column == 'ip':
+                try:
+                    parts = [int(p) for p in text.split('.')]
+                    if len(parts) == 4:
+                        return tuple(parts)
+                except Exception:
+                    pass
+                return (999, 999, 999, 999, text.lower())
+            if column in ('docs_uid', 'avatar_uid', 'uid'):
+                try:
+                    return (0, int(text))
+                except Exception:
+                    return (1, text.lower())
+            return text.lower()
+
+        items = [(sort_key(tree.set(k, column)), k) for k in tree.get_children('')]
+        items.sort(key=lambda x: x[0], reverse=reverse)
         for idx, (_val, k) in enumerate(items):
             tree.move(k, '', idx)
         tree.heading(column, command=lambda c=column, r=router, rev=not reverse: self._sort_uid_tree(r, c, rev))
