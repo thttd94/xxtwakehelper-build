@@ -2,8 +2,8 @@ import json, tkinter as tk, urllib.request, math, os
 from datetime import datetime, timezone
 
 DB = r'C:\Users\Administrator\AppData\Roaming\9router\db.json'
-API = 'http://127.0.0.1:20128/api/usage/{}'
-REFRESH_MS = 5000
+API = 'http://127.0.0.1:20129/api/usage/{}'
+REFRESH_MS = 60000
 W = 360
 ROW_H = 78
 PAD = 8
