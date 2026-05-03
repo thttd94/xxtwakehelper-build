@@ -16,6 +16,123 @@ from xxtouch_openapi_client import XXTouchOpenAPIClient, XXTouchOpenAPIError
 CONFIG_PATH = Path(__file__).with_name('xxtouch_router_config.json')
 TXT_POOL_PATH = Path(__file__).with_name('xxtouch_txt_pool.json')
 INLINE_SNIPPETS_PATH = Path(__file__).with_name('xxtouch_inline_snippets.json')
+TIKTOK_UID_RESULT_PATH = '/var/mobile/Media/1ferver/tiktok_uid_folders.txt'
+TIKTOK_UID_INLINE_LUA = r'''
+file = require("file")
+
+local OUT = "/var/mobile/Media/1ferver/tiktok_uid_folders.txt"
+local bases = {
+  "/private/var/mobile/Containers/Data/Application",
+  "/var/mobile/Containers/Data/Application"
+}
+
+local function write(s)
+  local old = ""
+  if file.exists(OUT) then old = file.reads(OUT) or "" end
+  file.writes(OUT, old .. tostring(s) .. "\n")
+  print(s)
+end
+
+local function join(a, b)
+  return tostring(a):gsub("/$", "") .. "/" .. tostring(b):gsub("^/", "")
+end
+
+local function list(path)
+  local t = file.list(path)
+  local arr = {}
+  if type(t) == "table" then
+    for _, name in pairs(t) do
+      if name and name ~= "." and name ~= ".." then table.insert(arr, tostring(name)) end
+    end
+  end
+  table.sort(arr)
+  return arr
+end
+
+local function is_dir(path)
+  return type(file.list(path)) == "table"
+end
+
+local function exists(path)
+  return file.exists(path) or is_dir(path)
+end
+
+local function is_number_name(name)
+  return string.match(tostring(name), "^[0-9]+$") ~= nil
+end
+
+local function is_tiktok_container(container)
+  if exists(join(container, "Documents/Aweme.db")) then return true end
+  if exists(join(container, "Documents/mmkv")) then return true end
+  if exists(join(container, "Documents/AWEIMGoupMockAvatar")) then return true end
+  local docs = join(container, "Documents")
+  for _, name in ipairs(list(docs)) do
+    if string.match(name, "^AwemeIM%-.+%.db$") then return true end
+  end
+  return false
+end
+
+local function find_tiktok_container()
+  for _, base in ipairs(bases) do
+    for _, folder in ipairs(list(base)) do
+      local container = join(base, folder)
+      if is_dir(container) and is_tiktok_container(container) then return container end
+    end
+  end
+  return nil
+end
+
+file.writes(OUT, "")
+local container = find_tiktok_container()
+if not container then
+  write("STATUS=NO_CONTAINER")
+  write("DONE")
+  return true
+end
+
+write("TIKTOK_CONTAINER=" .. container)
+
+local docs_uid = ""
+local avatar_uid = ""
+local docs = join(container, "Documents")
+local avatar = join(container, "Documents/AWEIMGoupMockAvatar")
+
+for _, name in ipairs(list(docs)) do
+  local p = join(docs, name)
+  if docs_uid == "" and is_number_name(name) and is_dir(p) then
+    docs_uid = name
+    write("DOCUMENTS_UID_FOLDER=" .. name)
+    write("DOCUMENTS_PATH=" .. p)
+  end
+end
+
+for _, name in ipairs(list(avatar)) do
+  local p = join(avatar, name)
+  if avatar_uid == "" and is_number_name(name) and is_dir(p) then
+    avatar_uid = name
+    write("AVATAR_UID_FOLDER=" .. name)
+    write("AVATAR_PATH=" .. p)
+  end
+end
+
+write("DOCS_UID=" .. docs_uid)
+write("AVATAR_UID=" .. avatar_uid)
+
+if docs_uid ~= "" and avatar_uid ~= "" and docs_uid == avatar_uid then
+  write("MATCH=YES")
+  write("UID=" .. docs_uid)
+elseif docs_uid == "" and avatar_uid == "" then
+  write("MATCH=NO")
+  write("STATUS=NO_UID_FOLDERS")
+else
+  write("MATCH=NO")
+  write("STATUS=UID_NOT_MATCH")
+end
+
+write("DONE")
+return true
+'''
+
 DEFAULT_INLINE_SNIPPETS = [
     {
         'title': 'Code đóng app đang chạy',
@@ -143,6 +260,8 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_devices_trees = {}
         self.router_logs_widgets = {}
         self.router_file_widgets = {}
+        self.router_uid_trees = {}
+        self.router_uid_status_labels = {}
         self.remote_panel = None
         self.remote_header_label = None
         self.remote_status_label = None
@@ -225,6 +344,8 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_devices_trees.clear()
         self.router_logs_widgets.clear()
         self.router_file_widgets.clear()
+        self.router_uid_trees.clear()
+        self.router_uid_status_labels.clear()
         self.router_tabs = ttk.Notebook(self.shell, style='HeadTab.TNotebook')
         self.router_tabs.pack(fill='both', expand=True)
         self.router_tabs.bind('<<NotebookTabChanged>>', self._on_router_tab_changed)
@@ -241,12 +362,15 @@ class XXTouchOnlyDemo(tk.Tk):
         jobs_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
         devices_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
         logs_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
+        uid_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
         router_notebook.add(jobs_tab, text='XXTouch Jobs')
         router_notebook.add(devices_tab, text='Devices Info')
         router_notebook.add(logs_tab, text='Logs')
+        router_notebook.add(uid_tab, text='Lấy UID')
         self._jobs_tab(jobs_tab, router)
         self._devices_tab(devices_tab, router)
         self._logs_tab(logs_tab, router)
+        self._uid_tab(uid_tab, router)
 
     def _jobs_tab(self, parent, router):
         self._controls(parent, router)
@@ -623,6 +747,150 @@ class XXTouchOnlyDemo(tk.Tk):
         router['_device_sort_state'] = {}
         self.router_devices_trees[id(router)] = tree
         self._refresh_router_devices(router)
+
+    def _uid_tab(self, parent, router):
+        top = ttk.Frame(parent, style='Card.TFrame')
+        top.pack(fill='x', pady=(0, 10))
+        ttk.Label(top, text='Lấy UID TikTok từ 2 thư mục Documents/<số> và Documents/AWEIMGoupMockAvatar/<số>', style='Title.TLabel').pack(side='left')
+        ttk.Button(top, text='Quét ALL máy router này', command=lambda r=router: self._run_background(r, self._scan_tiktok_uid_for_router)).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Xuất TXT', command=lambda r=router: self._export_uid_results(r)).pack(side='right', padx=(8, 0))
+        status = ttk.Label(parent, text=f'Tổng: {len(router.get("rows", []))} máy', style='Sub.TLabel')
+        status.pack(anchor='w', pady=(0, 8))
+        self.router_uid_status_labels[id(router)] = status
+
+        columns = ('machine', 'ip', 'docs_uid', 'avatar_uid', 'uid', 'status')
+        headings = {'machine': 'Máy', 'ip': 'IP', 'docs_uid': 'Documents UID', 'avatar_uid': 'Avatar UID', 'uid': 'UID nếu khớp', 'status': 'Trạng thái'}
+        widths = {'machine': 90, 'ip': 140, 'docs_uid': 190, 'avatar_uid': 190, 'uid': 190, 'status': 260}
+        table_wrap = ttk.Frame(parent, style='Card.TFrame')
+        table_wrap.pack(fill='both', expand=True)
+        tree = ttk.Treeview(table_wrap, columns=columns, show='headings', height=18)
+        vsb = ttk.Scrollbar(table_wrap, orient='vertical', command=tree.yview)
+        hsb = ttk.Scrollbar(table_wrap, orient='horizontal', command=tree.xview)
+        tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        for col in columns:
+            tree.heading(col, text=headings[col])
+            tree.column(col, width=widths[col], anchor='center')
+        tree.grid(row=0, column=0, sticky='nsew')
+        vsb.grid(row=0, column=1, sticky='ns')
+        hsb.grid(row=1, column=0, sticky='ew')
+        table_wrap.rowconfigure(0, weight=1)
+        table_wrap.columnconfigure(0, weight=1)
+        self.router_uid_trees[id(router)] = tree
+        self._refresh_uid_tree(router)
+
+    def _parse_tiktok_uid_result(self, text):
+        data = {}
+        for line in str(text or '').splitlines():
+            if '=' in line:
+                k, v = line.split('=', 1)
+                data[k.strip()] = v.strip()
+        docs = data.get('DOCS_UID') or data.get('DOCUMENTS_UID_FOLDER') or ''
+        avatar = data.get('AVATAR_UID') or data.get('AVATAR_UID_FOLDER') or ''
+        uid = data.get('UID') or (docs if docs and docs == avatar else '')
+        match = data.get('MATCH', '')
+        status = data.get('STATUS', '')
+        if uid and match == 'YES':
+            state = 'KHỚP'
+        elif status == 'NO_CONTAINER':
+            state = 'KHÔNG THẤY TIKTOK CONTAINER'
+        elif status == 'NO_UID_FOLDERS':
+            state = 'KHÔNG THẤY 2 THƯ MỤC UID'
+        elif docs or avatar:
+            state = 'KHÔNG TRÙNG NHAU'
+        else:
+            state = status or 'KHÔNG RÕ'
+        return docs, avatar, uid, state
+
+    def _refresh_uid_tree(self, router):
+        tree = self.router_uid_trees.get(id(router))
+        if tree is None:
+            return
+        tree.delete(*tree.get_children())
+        ok = 0
+        for row in router.get('rows', []):
+            uid = row.get('tiktok_uid', '')
+            if uid:
+                ok += 1
+            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), row.get('tiktok_docs_uid', ''), row.get('tiktok_avatar_uid', ''), uid, row.get('tiktok_uid_status', 'Chưa quét')))
+        label = self.router_uid_status_labels.get(id(router))
+        if label:
+            label.config(text=f'Tổng: {len(router.get("rows", []))} máy | UID khớp: {ok}')
+
+    def _scan_tiktok_uid_for_router(self, router):
+        rows = list(router.get('rows', []))
+        if not rows:
+            self._append_router_log(router, 'LẤY UID: chưa có danh sách máy|ip')
+            return
+        self._append_router_log(router, f'LẤY UID: bắt đầu quét {len(rows)} máy')
+        for row in rows:
+            row['tiktok_docs_uid'] = ''
+            row['tiktok_avatar_uid'] = ''
+            row['tiktok_uid'] = ''
+            row['tiktok_uid_status'] = 'Đang chờ'
+        self.after(0, lambda r=router: self._refresh_uid_tree(r))
+
+        def task(row):
+            ip = str(row.get('ip') or '').strip()
+            if not ip:
+                raise XXTouchOpenAPIError('Thiếu IP')
+            client = XXTouchOpenAPIClient(f'http://{ip}:46952', timeout=12, connect_timeout=1.2, read_timeout=8)
+            try:
+                client.recycle()
+                time.sleep(0.2)
+            except Exception:
+                pass
+            client.spawn(TIKTOK_UID_INLINE_LUA)
+            time.sleep(1.2)
+            text = client.download_text_file(TIKTOK_UID_RESULT_PATH)
+            docs, avatar, uid, state = self._parse_tiktok_uid_result(text)
+            row['tiktok_docs_uid'] = docs
+            row['tiktok_avatar_uid'] = avatar
+            row['tiktok_uid'] = uid
+            row['tiktok_uid_status'] = state
+            row['updated'] = now_text()
+            return row
+
+        success = 0
+        failed = 0
+        max_workers = min(32, max(1, len(rows)))
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            future_map = {pool.submit(task, row): row for row in rows}
+            for future in as_completed(future_map):
+                row = future_map[future]
+                try:
+                    future.result()
+                    if row.get('tiktok_uid'):
+                        success += 1
+                    else:
+                        failed += 1
+                    self.after(0, lambda r=router: self._refresh_uid_tree(r))
+                except Exception as e:
+                    failed += 1
+                    row['tiktok_docs_uid'] = ''
+                    row['tiktok_avatar_uid'] = ''
+                    row['tiktok_uid'] = ''
+                    row['tiktok_uid_status'] = 'LỖI: ' + str(e)
+                    row['updated'] = now_text()
+                    self.after(0, lambda r=router: self._refresh_uid_tree(r))
+                    self.after(0, lambda row=row, err=str(e): self._append_router_log(router, f'[{row.get("machine", "?")}] LẤY UID lỗi: {err}'))
+        save_router_config(self.routers)
+        self._write_uid_results_file(router)
+        self.after(0, lambda r=router: self._refresh_uid_tree(r))
+        self.after(0, lambda: self._append_router_log(router, f'LẤY UID xong: khớp {success}, lỗi/chưa khớp {failed}'))
+
+    def _write_uid_results_file(self, router):
+        safe_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in str(router.get('name', 'router')))
+        path = Path(__file__).with_name(f'tiktok_uid_results_{safe_name}.txt')
+        lines = ['machine|ip|documents_uid|avatar_uid|uid|status']
+        for row in router.get('rows', []):
+            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_docs_uid', 'tiktok_avatar_uid', 'tiktok_uid', 'tiktok_uid_status']))
+        path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        router['tiktok_uid_results_file'] = str(path)
+        return path
+
+    def _export_uid_results(self, router):
+        path = self._write_uid_results_file(router)
+        messagebox.showinfo('Xuất UID', f'Đã xuất kết quả:\n{path}')
 
     def _refresh_router_devices(self, router):
         tree = self.router_devices_trees.get(id(router))
