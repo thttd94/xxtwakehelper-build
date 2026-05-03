@@ -934,7 +934,8 @@ class XXTouchOnlyDemo(tk.Tk):
                     future.result()
                     if row.get('tiktok_uid'):
                         success += 1
-                        threading.Thread(target=self._resolve_tiktok_user_for_row, args=(router, row), daemon=True).start()
+                        # Không auto resolve USER ở đây: request web TikTok hàng loạt dễ làm GUI lag/đơ.
+                        # USER sẽ để chạy thủ công/on-demand nếu cần.
                     else:
                         failed += 1
                     self.after(0, lambda r=router: self._refresh_uid_tree(r))
