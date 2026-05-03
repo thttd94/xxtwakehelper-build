@@ -14,6 +14,7 @@ FLOATING_MENU_PATH = LUA_DIR / 'floating_menu.lua'
 from xxtouch_openapi_client import XXTouchOpenAPIClient, XXTouchOpenAPIError
 
 CONFIG_PATH = Path(__file__).with_name('xxtouch_router_config.json')
+LOG_PATH = Path(__file__).with_name('xxtouch_only_gui_demo.log')
 TXT_POOL_PATH = Path(__file__).with_name('xxtouch_txt_pool.json')
 INLINE_SNIPPETS_PATH = Path(__file__).with_name('xxtouch_inline_snippets.json')
 TIKTOK_UID_RESULT_PATH = '/var/mobile/Media/1ferver/tiktok_uid_folders.txt'
@@ -1034,7 +1035,11 @@ class XXTouchOnlyDemo(tk.Tk):
     def _logs_tab(self, parent, router):
         card = ttk.Frame(parent, style='Card.TFrame', padding=12)
         card.pack(fill='both', expand=True)
-        ttk.Label(card, text='RUN LOG', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
+        head = ttk.Frame(card, style='Card.TFrame')
+        head.pack(fill='x', pady=(0, 8))
+        ttk.Label(head, text='RUN LOG', style='Title.TLabel').pack(side='left')
+        ttk.Label(head, text=f'File: {LOG_PATH.name}', style='Sub.TLabel').pack(side='left', padx=(12, 0))
+        ttk.Button(head, text='Mở file log', command=lambda: self._open_log_file()).pack(side='right')
         wrap = ttk.Frame(card, style='Card.TFrame')
         wrap.pack(fill='both', expand=True)
         text = tk.Text(wrap, height=26, bg='#0f172a', fg='#e2e8f0', insertbackground='#e2e8f0', relief='solid', borderwidth=1, wrap='none')
@@ -1049,6 +1054,14 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_logs_widgets[id(router)] = text
         self._refresh_router_logs(router)
 
+    def _open_log_file(self):
+        try:
+            LOG_PATH.touch(exist_ok=True)
+            import os
+            os.startfile(str(LOG_PATH))
+        except Exception as e:
+            messagebox.showerror('Mở file log', str(e))
+
     def _refresh_router_logs(self, router):
         widget = self.router_logs_widgets.get(id(router))
         if widget is None:
@@ -1061,8 +1074,19 @@ class XXTouchOnlyDemo(tk.Tk):
         widget.config(state='disabled')
 
     def _append_router_log(self, router, line):
-        router.setdefault('logs', []).append(f'[{now_text()}] {line}')
+        stamp = now_text()
+        entry = f'[{stamp}] {line}'
+        router_name = str(router.get('name', '?')) if isinstance(router, dict) else '?'
+        router.setdefault('logs', []).append(entry)
         router['logs'] = router['logs'][-300:]
+        try:
+            from datetime import datetime
+            full_stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with LOG_PATH.open('a', encoding='utf-8') as f:
+                f.write(f'{full_stamp} [{router_name}] {line}\n')
+        except Exception:
+            pass
         save_router_config(self.routers)
         self._refresh_router_logs(router)
 
