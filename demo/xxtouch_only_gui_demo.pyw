@@ -793,9 +793,9 @@ class XXTouchOnlyDemo(tk.Tk):
         status.pack(anchor='w', pady=(0, 8))
         self.router_uid_status_labels[id(router)] = status
 
-        columns = ('machine', 'ip', 'docs_uid', 'avatar_uid', 'uid', 'user', 'status')
-        headings = {'machine': 'Máy', 'ip': 'IP', 'docs_uid': 'Documents UID', 'avatar_uid': 'Avatar UID', 'uid': 'UID', 'user': 'USER', 'status': 'Trạng thái'}
-        widths = {'machine': 90, 'ip': 140, 'docs_uid': 190, 'avatar_uid': 190, 'uid': 190, 'user': 180, 'status': 260}
+        columns = ('machine', 'ip', 'uid', 'user', 'status')
+        headings = {'machine': 'Máy', 'ip': 'IP', 'uid': 'UID', 'user': 'USER', 'status': 'Trạng thái'}
+        widths = {'machine': 90, 'ip': 140, 'uid': 210, 'user': 200, 'status': 320}
         table_wrap = ttk.Frame(parent, style='Card.TFrame')
         table_wrap.pack(fill='both', expand=True)
         tree = ttk.Treeview(table_wrap, columns=columns, show='headings', height=18)
@@ -860,7 +860,7 @@ class XXTouchOnlyDemo(tk.Tk):
                 ok += 1
             duplicate = (uid and uid_counts.get(uid, 0) > 1) or (user and user != 'Đang lấy...' and user_counts.get(user.lower(), 0) > 1)
             tags = ('duplicate_uid_user',) if duplicate else ()
-            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), row.get('tiktok_docs_uid', ''), row.get('tiktok_avatar_uid', ''), uid, user, row.get('tiktok_uid_status', 'Chưa quét')), tags=tags)
+            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), uid, user, row.get('tiktok_uid_status', 'Chưa quét')), tags=tags)
         label = self.router_uid_status_labels.get(id(router))
         if label:
             label.config(text=f'Tổng: {len(router.get("rows", []))} máy | UID khớp: {ok}')
@@ -885,7 +885,7 @@ class XXTouchOnlyDemo(tk.Tk):
                 except Exception:
                     pass
                 return (999, 999, 999, 999, text.lower())
-            if column in ('docs_uid', 'avatar_uid', 'uid'):
+            if column in ('uid',):
                 try:
                     return (0, int(text))
                 except Exception:
@@ -1015,9 +1015,9 @@ class XXTouchOnlyDemo(tk.Tk):
     def _write_uid_results_file(self, router):
         safe_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in str(router.get('name', 'router')))
         path = Path(__file__).with_name(f'tiktok_uid_results_{safe_name}.txt')
-        lines = ['machine|ip|documents_uid|avatar_uid|uid|user|status']
+        lines = ['machine|ip|uid|user|status']
         for row in router.get('rows', []):
-            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_docs_uid', 'tiktok_avatar_uid', 'tiktok_uid', 'tiktok_user', 'tiktok_uid_status']))
+            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_uid', 'tiktok_user', 'tiktok_uid_status']))
         path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
         router['tiktok_uid_results_file'] = str(path)
         return path
