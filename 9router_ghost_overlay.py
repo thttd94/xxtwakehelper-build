@@ -1,7 +1,11 @@
 import json, tkinter as tk, urllib.request, math, os
 from datetime import datetime, timezone
 
-DB = r'C:\Users\Administrator\AppData\Roaming\9router\db.json'
+DB_CANDIDATES = [
+    r'C:\Users\Administrator\AppData\Roaming\9router\db.json',
+    r'C:\Users\Administrator\9router\data\db.json',
+    r'C:\9router-data\db.json',
+]
 API = 'http://127.0.0.1:20129/api/usage/{}'
 REFRESH_MS = 60000
 W = 360
@@ -67,16 +71,46 @@ def short_name(s):
     return s[:28]
 
 
-def accounts():
+def data_dir_from_process():
     try:
-        with open(DB, encoding='utf-8') as f:
-            d=json.load(f)
+        import subprocess, re
+        out = subprocess.check_output(
+            ['wmic', 'process', 'where', "commandline like '%9router%'", 'get', 'CommandLine', '/value'],
+            text=True, stderr=subprocess.DEVNULL, timeout=3
+        )
+        m = re.search(r'--data-dir\s+"?([^"\r\n]+)"?', out, re.I)
+        if m:
+            return m.group(1).strip()
     except Exception:
-        return []
-    return sorted(
-        [a for a in d.get('providerConnections',[]) if a.get('provider')=='codex'],
-        key=lambda x:(x.get('priority') or 999,x.get('name') or '')
-    )[:6]
+        pass
+    return None
+
+def db_candidates():
+    vals = []
+    dd = data_dir_from_process()
+    if dd:
+        vals += [os.path.join(dd, 'db.json'), os.path.join(dd, 'data', 'db.json')]
+    vals += DB_CANDIDATES
+    seen = set()
+    out = []
+    for v in vals:
+        k = os.path.normcase(os.path.abspath(v))
+        if k not in seen:
+            seen.add(k); out.append(v)
+    return out
+
+def accounts():
+    best = []
+    for db in db_candidates():
+        try:
+            with open(db, encoding='utf-8') as f:
+                d=json.load(f)
+            rows = [a for a in d.get('providerConnections',[]) if a.get('provider')=='codex']
+            if len(rows) > len(best):
+                best = rows
+        except Exception:
+            continue
+    return sorted(best, key=lambda x:(x.get('priority') or 999,x.get('name') or ''))[:6]
 
 
 def quota(cid):
