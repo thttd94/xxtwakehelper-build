@@ -1333,30 +1333,76 @@ class XXTouchOnlyDemo(tk.Tk):
             router_list.insert(idx, name)
             router_list.selection_set(idx)
 
-        def save_mapping():
+        def parse_machine_ip_line(raw):
+            raw = str(raw or '').strip()
+            if not raw:
+                return None
+            if '|' in raw:
+                parts = [part.strip() for part in raw.split('|') if part.strip()]
+                if len(parts) >= 3:
+                    # Accept: so_may|Proxy_xxx|ip -> use so_may|ip
+                    machine, ip = parts[0], parts[-1]
+                elif len(parts) >= 2:
+                    machine, ip = parts[0], parts[1]
+                else:
+                    return None
+            else:
+                parts = raw.split()
+                if len(parts) < 2:
+                    return None
+                machine, ip = parts[0], parts[-1]
+            machine = str(machine).strip()
+            ip = str(ip).strip()
+            if not machine or not ip:
+                return None
+            return machine, ip
+
+        def apply_mapping(show_message=True, rebuild_tabs=True):
             sel = router_list.curselection()
             if not sel:
-                return
+                return False
             idx = sel[0]
+            name = router_name_entry.get().strip()
+            if name:
+                self.routers[idx]['name'] = name
+                router_list.delete(idx)
+                router_list.insert(idx, name)
+                router_list.selection_set(idx)
+            old_by_machine = {str(row.get('machine', '')).strip(): row for row in self.routers[idx].get('rows', [])}
             rows = []
             for line in mapping.get('1.0', 'end').splitlines():
-                raw = line.strip()
-                if not raw:
+                parsed = parse_machine_ip_line(line)
+                if not parsed:
                     continue
-                if '|' in raw:
-                    machine, ip = raw.split('|', 1)
-                else:
-                    parts = raw.split()
-                    if len(parts) < 2:
-                        continue
-                    machine, ip = parts[0], parts[1]
-                rows.append({'stt': str(len(rows) + 1), 'machine': machine.strip(), 'ip': ip.strip(), 'udid': '', 'network': 'Unknown', 'screen': 'Unknown', 'app': '-', 'xxtouch': 'Unknown', 'updated': '-', 'note': ''})
+                machine, ip = parsed
+                old = dict(old_by_machine.get(machine, {}))
+                old.update({
+                    'stt': str(len(rows) + 1),
+                    'machine': machine,
+                    'ip': ip,
+                })
+                old.setdefault('udid', '')
+                old.setdefault('network', 'Unknown')
+                old.setdefault('screen', 'Unknown')
+                old.setdefault('app', '-')
+                old.setdefault('xxtouch', 'Unknown')
+                old.setdefault('updated', '-')
+                old.setdefault('note', '')
+                rows.append(old)
             self.routers[idx]['rows'] = rows
             save_router_config(self.routers)
-            self._build_router_tabs()
-            messagebox.showinfo('Lưu cấu hình', 'Đã lưu danh sách Máy|IP cho router')
+            if rebuild_tabs:
+                self._build_router_tabs()
+            if show_message:
+                messagebox.showinfo('Lưu cấu hình', 'Đã lưu danh sách Máy|IP cho router')
+            return True
+
+        def save_mapping():
+            apply_mapping(show_message=True, rebuild_tabs=True)
 
         def save_all():
+            # Make the visible edits in this dialog real before saving everything.
+            apply_mapping(show_message=False, rebuild_tabs=False)
             save_router_config(self.routers)
             self._build_router_tabs()
             messagebox.showinfo('Lưu cấu hình', 'Đã lưu toàn bộ cấu hình router')
@@ -1367,7 +1413,7 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Button(form, text='Đổi tên router', command=rename_router).pack(side='left', padx=(0, 8))
         ttk.Button(form, text='Lưu danh sách Máy|IP', command=save_mapping).pack(side='left', padx=(0, 8))
         ttk.Button(form, text='Lưu', command=save_all).pack(side='right')
-        ttk.Label(wrap, text='Nhập theo dạng: máy|ip hoặc máy ip', style='Sub.TLabel').pack(anchor='w')
+        ttk.Label(wrap, text='Nhập theo dạng: máy|ip, máy ip, hoặc số máy|Proxy_xxx|ip. Dạng Proxy sẽ tự lưu thành số máy|ip.', style='Sub.TLabel').pack(anchor='w')
 
     def _router_machine_range_text(self, router):
         rows = router.get('rows', []) or []
