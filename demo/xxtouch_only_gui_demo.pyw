@@ -760,7 +760,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_uid_status_labels[id(router)] = status
 
         columns = ('machine', 'ip', 'docs_uid', 'avatar_uid', 'uid', 'user', 'status')
-        headings = {'machine': 'Máy', 'ip': 'IP', 'docs_uid': 'Documents UID', 'avatar_uid': 'Avatar UID', 'uid': 'UID nếu khớp', 'user': 'USER', 'status': 'Trạng thái'}
+        headings = {'machine': 'Máy', 'ip': 'IP', 'docs_uid': 'Documents UID', 'avatar_uid': 'Avatar UID', 'uid': 'UID', 'user': 'USER', 'status': 'Trạng thái'}
         widths = {'machine': 90, 'ip': 140, 'docs_uid': 190, 'avatar_uid': 190, 'uid': 190, 'user': 180, 'status': 260}
         table_wrap = ttk.Frame(parent, style='Card.TFrame')
         table_wrap.pack(fill='both', expand=True)
@@ -776,6 +776,7 @@ class XXTouchOnlyDemo(tk.Tk):
         hsb.grid(row=1, column=0, sticky='ew')
         table_wrap.rowconfigure(0, weight=1)
         table_wrap.columnconfigure(0, weight=1)
+        tree.tag_configure('duplicate_uid_user', background='#7f1d1d', foreground='#ffffff')
         self.router_uid_trees[id(router)] = tree
         self._refresh_uid_tree(router)
 
@@ -808,11 +809,23 @@ class XXTouchOnlyDemo(tk.Tk):
             return
         tree.delete(*tree.get_children())
         ok = 0
+        uid_counts = {}
+        user_counts = {}
         for row in router.get('rows', []):
-            uid = row.get('tiktok_uid', '')
+            uid_val = str(row.get('tiktok_uid', '') or '').strip()
+            user_val = str(row.get('tiktok_user', '') or '').strip()
+            if uid_val:
+                uid_counts[uid_val] = uid_counts.get(uid_val, 0) + 1
+            if user_val and user_val != 'Đang lấy...':
+                user_counts[user_val.lower()] = user_counts.get(user_val.lower(), 0) + 1
+        for row in router.get('rows', []):
+            uid = str(row.get('tiktok_uid', '') or '').strip()
+            user = str(row.get('tiktok_user', '') or '').strip()
             if uid:
                 ok += 1
-            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), row.get('tiktok_docs_uid', ''), row.get('tiktok_avatar_uid', ''), uid, row.get('tiktok_user', ''), row.get('tiktok_uid_status', 'Chưa quét')))
+            duplicate = (uid and uid_counts.get(uid, 0) > 1) or (user and user != 'Đang lấy...' and user_counts.get(user.lower(), 0) > 1)
+            tags = ('duplicate_uid_user',) if duplicate else ()
+            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), row.get('tiktok_docs_uid', ''), row.get('tiktok_avatar_uid', ''), uid, user, row.get('tiktok_uid_status', 'Chưa quét')), tags=tags)
         label = self.router_uid_status_labels.get(id(router))
         if label:
             label.config(text=f'Tổng: {len(router.get("rows", []))} máy | UID khớp: {ok}')
