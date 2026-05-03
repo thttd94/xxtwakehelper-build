@@ -789,6 +789,8 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(top, text='Lấy UID TikTok từ 2 thư mục Documents/<số> và Documents/AWEIMGoupMockAvatar/<số>', style='Title.TLabel').pack(side='left')
         ttk.Button(top, text='Quét ALL máy router này', command=lambda r=router: self._run_background(r, self._scan_tiktok_uid_for_router)).pack(side='right', padx=(8, 0))
         ttk.Button(top, text='Xuất TXT', command=lambda r=router: self._export_uid_results(r)).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Copy ALL USER', command=lambda r=router: self._copy_uid_column(r, 'user')).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Copy ALL UID', command=lambda r=router: self._copy_uid_column(r, 'uid')).pack(side='right', padx=(8, 0))
         status = ttk.Label(parent, text=f'Tổng: {len(router.get("rows", []))} máy', style='Sub.TLabel')
         status.pack(anchor='w', pady=(0, 8))
         self.router_uid_status_labels[id(router)] = status
@@ -811,8 +813,58 @@ class XXTouchOnlyDemo(tk.Tk):
         table_wrap.rowconfigure(0, weight=1)
         table_wrap.columnconfigure(0, weight=1)
         tree.tag_configure('duplicate_uid_user', background='#7f1d1d', foreground='#ffffff')
+        tree.bind('<ButtonRelease-1>', lambda event, r=router: self._copy_uid_cell_on_click(r, event))
         self.router_uid_trees[id(router)] = tree
         self._refresh_uid_tree(router)
+
+    def _copy_to_clipboard(self, text):
+        self.clipboard_clear()
+        self.clipboard_append(str(text or ''))
+        self.update_idletasks()
+
+    def _copy_uid_column(self, router, column):
+        key = 'tiktok_uid' if column == 'uid' else 'tiktok_user'
+        label = 'UID' if column == 'uid' else 'USER'
+        values = []
+        seen = set()
+        for row in router.get('rows', []):
+            value = str(row.get(key, '') or '').strip()
+            if not value or value == 'Đang lấy...':
+                continue
+            if value in seen:
+                continue
+            seen.add(value)
+            values.append(value)
+        self._copy_to_clipboard('\n'.join(values))
+        self._append_router_log(router, f'LẤY UID: đã copy {len(values)} {label}')
+
+    def _copy_uid_cell_on_click(self, router, event):
+        tree = self.router_uid_trees.get(id(router))
+        if tree is None:
+            return
+        region = tree.identify('region', event.x, event.y)
+        if region != 'cell':
+            return
+        column_id = tree.identify_column(event.x)
+        row_id = tree.identify_row(event.y)
+        if not row_id:
+            return
+        try:
+            col_index = int(column_id.replace('#', '')) - 1
+        except Exception:
+            return
+        columns = list(tree['columns'])
+        if col_index < 0 or col_index >= len(columns):
+            return
+        column = columns[col_index]
+        if column not in ('uid', 'user'):
+            return
+        values = tree.item(row_id, 'values')
+        value = str(values[col_index] if col_index < len(values) else '').strip()
+        if not value or value == 'Đang lấy...':
+            return
+        self._copy_to_clipboard(value)
+        self._append_router_log(router, f'LẤY UID: đã copy {column.upper()} {value}')
 
     def _parse_tiktok_uid_result(self, text):
         data = {}
