@@ -1607,13 +1607,13 @@ class XXTouchOnlyDemo(tk.Tk):
             return
         self._copy_to_clipboard(value)
 
-    def _show_machine_list_history_detail(self, value):
+    def _show_machine_list_history_detail(self, value, title='Chi tiết'):
         value = str(value or '').strip()
         popup = tk.Toplevel(self)
-        popup.title('Chi tiết list máy')
+        popup.title(title)
         popup.geometry('560x420')
         popup.configure(bg='#111111')
-        ttk.Label(popup, text='Chi tiết list máy', style='Title.TLabel').pack(anchor='w', padx=14, pady=(14, 8))
+        ttk.Label(popup, text=title, style='Title.TLabel').pack(anchor='w', padx=14, pady=(14, 8))
         text = tk.Text(popup, wrap='word', bg='#ffffff', fg='#111111', height=14)
         text.pack(fill='both', expand=True, padx=14, pady=(0, 10))
         text.insert('1.0', value)
@@ -1647,7 +1647,7 @@ class XXTouchOnlyDemo(tk.Tk):
         popup.configure(bg='#111111')
         ttk.Label(popup, text='Lịch sử List Máy', style='Title.TLabel').pack(anchor='w', padx=14, pady=(14, 6))
         ttk.Label(popup, text='Chỉ ghi thêm dòng mới khi bấm thao tác và list máy khác lần ghi gần nhất.', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 4))
-        ttk.Label(popup, text=f'Click list để copy, double-click để xem đầy đủ. File log: {MACHINE_LIST_HISTORY_LOG_PATH.name}', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 10))
+        ttk.Label(popup, text=f'Click list/thao tác để copy, double-click để xem đầy đủ. File log: {MACHINE_LIST_HISTORY_LOG_PATH.name}', style='Sub.TLabel').pack(anchor='w', padx=14, pady=(0, 10))
 
         shell = tk.Frame(popup, bg='#111111')
         shell.pack(fill='both', expand=True, padx=14, pady=(0, 14))
@@ -1680,8 +1680,12 @@ class XXTouchOnlyDemo(tk.Tk):
             value_label = tk.Label(row, text=display_value, width=46, anchor='w', bg='#ffffff', fg='#111111', cursor='hand2')
             value_label.pack(side='left', padx=4, pady=5)
             value_label.bind('<Button-1>', lambda _e, v=value: self._copy_machine_list_history_value(v))
-            value_label.bind('<Double-Button-1>', lambda _e, v=value: self._show_machine_list_history_detail(v))
-            tk.Label(row, text=action, width=18, anchor='w', bg='#ffffff', fg='#111111').pack(side='left', padx=4, pady=5)
+            value_label.bind('<Double-Button-1>', lambda _e, v=value: self._show_machine_list_history_detail(v, 'Chi tiết list máy'))
+            display_action = action if len(action) <= 24 else action[:21] + '...'
+            action_label = tk.Label(row, text=display_action, width=18, anchor='w', bg='#ffffff', fg='#111111', cursor='hand2')
+            action_label.pack(side='left', padx=4, pady=5)
+            action_label.bind('<Button-1>', lambda _e, v=action: self._copy_machine_list_history_value(v))
+            action_label.bind('<Double-Button-1>', lambda _e, v=action: self._show_machine_list_history_detail(v, 'Chi tiết thao tác'))
             tk.Button(row, text='Nạp lại', command=lambda v=value, p=popup: self._load_machine_list_from_history(router, v, p)).pack(side='left', padx=4, pady=3)
 
     def _selected_rows(self, router):
