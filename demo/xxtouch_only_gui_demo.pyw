@@ -842,7 +842,7 @@ class XXTouchOnlyDemo(tk.Tk):
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 },
             )
-            with opener.open(req, timeout=8) as resp:
+            with opener.open(req, timeout=3) as resp:
                 final_url = resp.geturl() or ''
                 html = resp.read(200000).decode('utf-8', 'ignore')
             for source in [final_url, html]:
@@ -854,6 +854,25 @@ class XXTouchOnlyDemo(tk.Tk):
             return ''
         except Exception:
             return ''
+
+    def _resolve_tiktok_user_for_row(self, router, row):
+        uid = str(row.get('tiktok_uid', '') or '').strip()
+        if not uid:
+            return
+        if str(row.get('tiktok_user', '') or '').strip():
+            return
+        row['tiktok_user'] = 'Đang lấy...'
+        self.after(0, lambda r=router: self._refresh_uid_tree(r))
+        user = self._resolve_tiktok_user_from_uid(uid)
+        row['tiktok_user'] = user or ''
+        if user:
+            row['tiktok_uid_status'] = 'KHỚP + USER OK'
+        else:
+            row['tiktok_uid_status'] = 'KHỚP, CHƯA LẤY ĐƯỢC USER'
+        row['updated'] = now_text()
+        save_router_config(self.routers)
+        self._write_uid_results_file(router)
+        self.after(0, lambda r=router: self._refresh_uid_tree(r))
 
     def _scan_tiktok_uid_for_router(self, router):
         rows = list(router.get('rows', []))
@@ -886,7 +905,7 @@ class XXTouchOnlyDemo(tk.Tk):
             row['tiktok_docs_uid'] = docs
             row['tiktok_avatar_uid'] = avatar
             row['tiktok_uid'] = uid
-            row['tiktok_user'] = self._resolve_tiktok_user_from_uid(uid) if uid else ''
+            row['tiktok_user'] = ''
             row['tiktok_uid_status'] = state
             row['updated'] = now_text()
             return row
@@ -902,6 +921,7 @@ class XXTouchOnlyDemo(tk.Tk):
                     future.result()
                     if row.get('tiktok_uid'):
                         success += 1
+                        threading.Thread(target=self._resolve_tiktok_user_for_row, args=(router, row), daemon=True).start()
                     else:
                         failed += 1
                     self.after(0, lambda r=router: self._refresh_uid_tree(r))
