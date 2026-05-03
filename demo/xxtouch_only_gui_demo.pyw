@@ -62,22 +62,16 @@ local function is_number_name(name)
   return string.match(tostring(name), "^[0-9]+$") ~= nil
 end
 
-local function is_tiktok_container(container)
-  if exists(join(container, "Documents/Aweme.db")) then return true end
-  if exists(join(container, "Documents/mmkv")) then return true end
-  if exists(join(container, "Documents/AWEIMGoupMockAvatar")) then return true end
-  local docs = join(container, "Documents")
-  for _, name in ipairs(list(docs)) do
-    if string.match(name, "^AwemeIM%-.+%.db$") then return true end
-  end
+local function is_app_container(container, bundle_id)
+  if exists(join(container, "Library/Preferences/" .. bundle_id .. ".plist")) then return true end
   return false
 end
 
-local function find_tiktok_container()
+local function find_app_container(bundle_id)
   for _, base in ipairs(bases) do
     for _, folder in ipairs(list(base)) do
       local container = join(base, folder)
-      if is_dir(container) and is_tiktok_container(container) then return container end
+      if is_dir(container) and is_app_container(container, bundle_id) then return container end
     end
   end
   return nil
@@ -94,14 +88,16 @@ local function read_user_from_file(path, uid)
   return ""
 end
 
-local function find_user_local(container, uid)
+local function find_user_local(container, uid, bundle_id)
   if not uid or uid == "" then return "" end
   local candidates = {
-    join(container, "Library/Preferences/com.ss.iphone.ugc.Ame.plist"),
+    join(container, "Library/Preferences/" .. bundle_id .. ".plist"),
     join(container, "Library/passportStorage/manifest.sqlite-wal"),
     join(container, "Library/passportStorage/manifest.sqlite"),
     join(container, "Documents/AwemeIM.db"),
     join(container, "Documents/AwemeIM-" .. uid .. ".db"),
+    join(container, "Documents/Aweme.db"),
+    join(container, "Documents/Aweme.db-wal"),
   }
   for _, p in ipairs(candidates) do
     local user = read_user_from_file(p, uid)
@@ -115,55 +111,58 @@ local function find_user_local(container, uid)
   return ""
 end
 
+local function scan_app(prefix, bundle_id)
+  local container = find_app_container(bundle_id)
+  if not container then
+    write(prefix .. "_STATUS=NO_CONTAINER")
+    return
+  end
+
+  write(prefix .. "_CONTAINER=" .. container)
+
+  local docs_uid = ""
+  local avatar_uid = ""
+  local docs = join(container, "Documents")
+  local avatar = join(container, "Documents/AWEIMGoupMockAvatar")
+
+  for _, name in ipairs(list(docs)) do
+    local p = join(docs, name)
+    if docs_uid == "" and is_number_name(name) and is_dir(p) then
+      docs_uid = name
+      write(prefix .. "_DOCUMENTS_UID_FOLDER=" .. name)
+      write(prefix .. "_DOCUMENTS_PATH=" .. p)
+    end
+  end
+
+  for _, name in ipairs(list(avatar)) do
+    local p = join(avatar, name)
+    if avatar_uid == "" and is_number_name(name) and is_dir(p) then
+      avatar_uid = name
+      write(prefix .. "_AVATAR_UID_FOLDER=" .. name)
+      write(prefix .. "_AVATAR_PATH=" .. p)
+    end
+  end
+
+  write(prefix .. "_DOCS_UID=" .. docs_uid)
+  write(prefix .. "_AVATAR_UID=" .. avatar_uid)
+
+  if docs_uid ~= "" and avatar_uid ~= "" and docs_uid == avatar_uid then
+    write(prefix .. "_MATCH=YES")
+    write(prefix .. "_UID=" .. docs_uid)
+    local user = find_user_local(container, docs_uid, bundle_id)
+    write(prefix .. "_USER=" .. user)
+  elseif docs_uid == "" and avatar_uid == "" then
+    write(prefix .. "_MATCH=NO")
+    write(prefix .. "_STATUS=NO_UID_FOLDERS")
+  else
+    write(prefix .. "_MATCH=NO")
+    write(prefix .. "_STATUS=UID_NOT_MATCH")
+  end
+end
+
 file.writes(OUT, "")
-local container = find_tiktok_container()
-if not container then
-  write("STATUS=NO_CONTAINER")
-  write("DONE")
-  return true
-end
-
-write("TIKTOK_CONTAINER=" .. container)
-
-local docs_uid = ""
-local avatar_uid = ""
-local docs = join(container, "Documents")
-local avatar = join(container, "Documents/AWEIMGoupMockAvatar")
-
-for _, name in ipairs(list(docs)) do
-  local p = join(docs, name)
-  if docs_uid == "" and is_number_name(name) and is_dir(p) then
-    docs_uid = name
-    write("DOCUMENTS_UID_FOLDER=" .. name)
-    write("DOCUMENTS_PATH=" .. p)
-  end
-end
-
-for _, name in ipairs(list(avatar)) do
-  local p = join(avatar, name)
-  if avatar_uid == "" and is_number_name(name) and is_dir(p) then
-    avatar_uid = name
-    write("AVATAR_UID_FOLDER=" .. name)
-    write("AVATAR_PATH=" .. p)
-  end
-end
-
-write("DOCS_UID=" .. docs_uid)
-write("AVATAR_UID=" .. avatar_uid)
-
-if docs_uid ~= "" and avatar_uid ~= "" and docs_uid == avatar_uid then
-  write("MATCH=YES")
-  write("UID=" .. docs_uid)
-  local user = find_user_local(container, docs_uid)
-  write("USER=" .. user)
-elseif docs_uid == "" and avatar_uid == "" then
-  write("MATCH=NO")
-  write("STATUS=NO_UID_FOLDERS")
-else
-  write("MATCH=NO")
-  write("STATUS=UID_NOT_MATCH")
-end
-
+scan_app("TIKTOK", "com.ss.iphone.ugc.Ame")
+scan_app("LITE", "com.ss.iphone.ugc.tiktok.lite")
 write("DONE")
 return true
 '''
@@ -789,15 +788,17 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(top, text='Lấy UID TikTok từ 2 thư mục Documents/<số> và Documents/AWEIMGoupMockAvatar/<số>', style='Title.TLabel').pack(side='left')
         ttk.Button(top, text='Quét ALL máy router này', command=lambda r=router: self._run_background(r, self._scan_tiktok_uid_for_router)).pack(side='right', padx=(8, 0))
         ttk.Button(top, text='Xuất TXT', command=lambda r=router: self._export_uid_results(r)).pack(side='right', padx=(8, 0))
-        ttk.Button(top, text='Copy ALL USER', command=lambda r=router: self._copy_uid_column(r, 'user')).pack(side='right', padx=(8, 0))
-        ttk.Button(top, text='Copy ALL UID', command=lambda r=router: self._copy_uid_column(r, 'uid')).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Copy USER LITE', command=lambda r=router: self._copy_uid_column(r, 'lite_user')).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Copy UID LITE', command=lambda r=router: self._copy_uid_column(r, 'lite_uid')).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Copy USER TIKTOK', command=lambda r=router: self._copy_uid_column(r, 'tiktok_user')).pack(side='right', padx=(8, 0))
+        ttk.Button(top, text='Copy UID TIKTOK', command=lambda r=router: self._copy_uid_column(r, 'tiktok_uid')).pack(side='right', padx=(8, 0))
         status = ttk.Label(parent, text=f'Tổng: {len(router.get("rows", []))} máy', style='Sub.TLabel')
         status.pack(anchor='w', pady=(0, 8))
         self.router_uid_status_labels[id(router)] = status
 
-        columns = ('machine', 'ip', 'uid', 'user', 'status')
-        headings = {'machine': 'Máy', 'ip': 'IP', 'uid': 'UID', 'user': 'USER', 'status': 'Trạng thái'}
-        widths = {'machine': 90, 'ip': 140, 'uid': 210, 'user': 200, 'status': 320}
+        columns = ('machine', 'ip', 'tiktok_uid', 'tiktok_user', 'lite_uid', 'lite_user')
+        headings = {'machine': 'Máy', 'ip': 'IP', 'tiktok_uid': 'UID TIKTOK', 'tiktok_user': 'USER TIKTOK', 'lite_uid': 'UID TIKTOK LITE', 'lite_user': 'USER TIKTOK LITE'}
+        widths = {'machine': 90, 'ip': 140, 'tiktok_uid': 210, 'tiktok_user': 200, 'lite_uid': 210, 'lite_user': 200}
         table_wrap = ttk.Frame(parent, style='Card.TFrame')
         table_wrap.pack(fill='both', expand=True)
         tree = ttk.Treeview(table_wrap, columns=columns, show='headings', height=18)
@@ -823,8 +824,13 @@ class XXTouchOnlyDemo(tk.Tk):
         self.update_idletasks()
 
     def _copy_uid_column(self, router, column):
-        key = 'tiktok_uid' if column == 'uid' else 'tiktok_user'
-        label = 'UID' if column == 'uid' else 'USER'
+        key_map = {
+            'tiktok_uid': ('tiktok_uid', 'UID TIKTOK'),
+            'tiktok_user': ('tiktok_user', 'USER TIKTOK'),
+            'lite_uid': ('tiktok_lite_uid', 'UID TIKTOK LITE'),
+            'lite_user': ('tiktok_lite_user', 'USER TIKTOK LITE'),
+        }
+        key, label = key_map.get(column, ('tiktok_uid', 'UID TIKTOK'))
         values = []
         seen = set()
         for row in router.get('rows', []):
@@ -857,7 +863,7 @@ class XXTouchOnlyDemo(tk.Tk):
         if col_index < 0 or col_index >= len(columns):
             return
         column = columns[col_index]
-        if column not in ('uid', 'user'):
+        if column not in ('tiktok_uid', 'tiktok_user', 'lite_uid', 'lite_user'):
             return
         values = tree.item(row_id, 'values')
         value = str(values[col_index] if col_index < len(values) else '').strip()
@@ -872,50 +878,55 @@ class XXTouchOnlyDemo(tk.Tk):
             if '=' in line:
                 k, v = line.split('=', 1)
                 data[k.strip()] = v.strip()
-        docs = data.get('DOCS_UID') or data.get('DOCUMENTS_UID_FOLDER') or ''
-        avatar = data.get('AVATAR_UID') or data.get('AVATAR_UID_FOLDER') or ''
-        uid = data.get('UID') or (docs if docs and docs == avatar else '')
-        user = data.get('USER', '')
-        match = data.get('MATCH', '')
-        status = data.get('STATUS', '')
-        if uid and match == 'YES':
-            state = 'KHỚP'
-        elif status == 'NO_CONTAINER':
-            state = 'KHÔNG THẤY TIKTOK CONTAINER'
-        elif status == 'NO_UID_FOLDERS':
-            state = 'KHÔNG THẤY 2 THƯ MỤC UID'
-        elif docs or avatar:
-            state = 'KHÔNG TRÙNG NHAU'
-        else:
-            state = status or 'KHÔNG RÕ'
-        return docs, avatar, uid, user, state
+
+        def app_result(prefix):
+            docs = data.get(f'{prefix}_DOCS_UID') or data.get(f'{prefix}_DOCUMENTS_UID_FOLDER') or ''
+            avatar = data.get(f'{prefix}_AVATAR_UID') or data.get(f'{prefix}_AVATAR_UID_FOLDER') or ''
+            uid = data.get(f'{prefix}_UID') or (docs if docs and docs == avatar else '')
+            user = data.get(f'{prefix}_USER', '')
+            return docs, avatar, uid, user
+
+        return app_result('TIKTOK') + app_result('LITE')
 
     def _refresh_uid_tree(self, router):
         tree = self.router_uid_trees.get(id(router))
         if tree is None:
             return
         tree.delete(*tree.get_children())
-        ok = 0
+        ok_tiktok = 0
+        ok_lite = 0
         uid_counts = {}
         user_counts = {}
         for row in router.get('rows', []):
-            uid_val = str(row.get('tiktok_uid', '') or '').strip()
-            user_val = str(row.get('tiktok_user', '') or '').strip()
-            if uid_val:
-                uid_counts[uid_val] = uid_counts.get(uid_val, 0) + 1
-            if user_val and user_val != 'Đang lấy...':
-                user_counts[user_val.lower()] = user_counts.get(user_val.lower(), 0) + 1
+            for key in ('tiktok_uid', 'tiktok_lite_uid'):
+                value = str(row.get(key, '') or '').strip()
+                if value:
+                    uid_counts[value] = uid_counts.get(value, 0) + 1
+            for key in ('tiktok_user', 'tiktok_lite_user'):
+                value = str(row.get(key, '') or '').strip()
+                if value and value != 'Đang lấy...':
+                    user_counts[value.lower()] = user_counts.get(value.lower(), 0) + 1
         for row in router.get('rows', []):
             uid = str(row.get('tiktok_uid', '') or '').strip()
             user = str(row.get('tiktok_user', '') or '').strip()
+            lite_uid = str(row.get('tiktok_lite_uid', '') or '').strip()
+            lite_user = str(row.get('tiktok_lite_user', '') or '').strip()
             if uid:
-                ok += 1
-            duplicate = (uid and uid_counts.get(uid, 0) > 1) or (user and user != 'Đang lấy...' and user_counts.get(user.lower(), 0) > 1)
+                ok_tiktok += 1
+            if lite_uid:
+                ok_lite += 1
+            duplicate = False
+            for value in (uid, lite_uid):
+                if value and uid_counts.get(value, 0) > 1:
+                    duplicate = True
+            for value in (user, lite_user):
+                if value and value != 'Đang lấy...' and user_counts.get(value.lower(), 0) > 1:
+                    duplicate = True
             tags = ('duplicate_uid_user',) if duplicate else ()
-            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), uid, user, row.get('tiktok_uid_status', 'Chưa quét')), tags=tags)
+            tree.insert('', 'end', values=(row.get('machine', ''), row.get('ip', ''), uid, user, lite_uid, lite_user), tags=tags)
         label = self.router_uid_status_labels.get(id(router))
         if label:
-            label.config(text=f'Tổng: {len(router.get("rows", []))} máy | UID khớp: {ok}')
+            label.config(text=f'Tổng: {len(router.get("rows", []))} máy | TikTok: {ok_tiktok} | Lite: {ok_lite}')
 
     def _sort_uid_tree(self, router, column, reverse):
         tree = self.router_uid_trees.get(id(router))
@@ -937,7 +948,7 @@ class XXTouchOnlyDemo(tk.Tk):
                 except Exception:
                     pass
                 return (999, 999, 999, 999, text.lower())
-            if column in ('uid',):
+            if column in ('tiktok_uid', 'lite_uid'):
                 try:
                     return (0, int(text))
                 except Exception:
@@ -1008,6 +1019,10 @@ class XXTouchOnlyDemo(tk.Tk):
             row['tiktok_avatar_uid'] = ''
             row['tiktok_uid'] = ''
             row['tiktok_user'] = ''
+            row['tiktok_lite_docs_uid'] = ''
+            row['tiktok_lite_avatar_uid'] = ''
+            row['tiktok_lite_uid'] = ''
+            row['tiktok_lite_user'] = ''
             row['tiktok_uid_status'] = 'Đang chờ'
         self.after(0, lambda r=router: self._refresh_uid_tree(r))
 
@@ -1024,12 +1039,16 @@ class XXTouchOnlyDemo(tk.Tk):
             client.spawn(TIKTOK_UID_INLINE_LUA)
             time.sleep(1.2)
             text = client.download_text_file(TIKTOK_UID_RESULT_PATH)
-            docs, avatar, uid, user, state = self._parse_tiktok_uid_result(text)
+            docs, avatar, uid, user, lite_docs, lite_avatar, lite_uid, lite_user = self._parse_tiktok_uid_result(text)
             row['tiktok_docs_uid'] = docs
             row['tiktok_avatar_uid'] = avatar
             row['tiktok_uid'] = uid
             row['tiktok_user'] = user
-            row['tiktok_uid_status'] = state
+            row['tiktok_lite_docs_uid'] = lite_docs
+            row['tiktok_lite_avatar_uid'] = lite_avatar
+            row['tiktok_lite_uid'] = lite_uid
+            row['tiktok_lite_user'] = lite_user
+            row['tiktok_uid_status'] = 'OK' if (uid or lite_uid) else 'KHÔNG THẤY UID'
             row['updated'] = now_text()
             return row
 
@@ -1042,10 +1061,8 @@ class XXTouchOnlyDemo(tk.Tk):
                 row = future_map[future]
                 try:
                     future.result()
-                    if row.get('tiktok_uid'):
+                    if row.get('tiktok_uid') or row.get('tiktok_lite_uid'):
                         success += 1
-                        # Không auto resolve USER ở đây: request web TikTok hàng loạt dễ làm GUI lag/đơ.
-                        # USER sẽ để chạy thủ công/on-demand nếu cần.
                     else:
                         failed += 1
                     self.after(0, lambda r=router: self._refresh_uid_tree(r))
@@ -1055,6 +1072,10 @@ class XXTouchOnlyDemo(tk.Tk):
                     row['tiktok_avatar_uid'] = ''
                     row['tiktok_uid'] = ''
                     row['tiktok_user'] = ''
+                    row['tiktok_lite_docs_uid'] = ''
+                    row['tiktok_lite_avatar_uid'] = ''
+                    row['tiktok_lite_uid'] = ''
+                    row['tiktok_lite_user'] = ''
                     row['tiktok_uid_status'] = 'LỖI: ' + str(e)
                     row['updated'] = now_text()
                     self.after(0, lambda r=router: self._refresh_uid_tree(r))
@@ -1067,9 +1088,9 @@ class XXTouchOnlyDemo(tk.Tk):
     def _write_uid_results_file(self, router):
         safe_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in str(router.get('name', 'router')))
         path = Path(__file__).with_name(f'tiktok_uid_results_{safe_name}.txt')
-        lines = ['machine|ip|uid|user|status']
+        lines = ['machine|ip|uid_tiktok|user_tiktok|uid_tiktok_lite|user_tiktok_lite']
         for row in router.get('rows', []):
-            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_uid', 'tiktok_user', 'tiktok_uid_status']))
+            lines.append('|'.join(str(row.get(k, '')) for k in ['machine', 'ip', 'tiktok_uid', 'tiktok_user', 'tiktok_lite_uid', 'tiktok_lite_user']))
         path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
         router['tiktok_uid_results_file'] = str(path)
         return path
