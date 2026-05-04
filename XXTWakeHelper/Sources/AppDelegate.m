@@ -1,6 +1,8 @@
 #import "AppDelegate.h"
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
+#import <sys/stat.h>
+#import <unistd.h>
 
 @interface AppDelegate ()
 @property (nonatomic, strong) NSTimer *wakeTimer;
@@ -47,6 +49,7 @@
     [self.window makeKeyAndVisible];
 
     [self log:@"launched"];
+    [self installBootWakeDaemon];
     [self startWakeLoopWithReason:@"didFinishLaunching"];
     return YES;
 }
@@ -66,7 +69,75 @@
 }
 
 - (void)wakeNowButton {
+    [self installBootWakeDaemon];
     [self startWakeLoopWithReason:@"button"];
+}
+
+- (void)installBootWakeDaemon {
+    NSString *scriptPath = @"/var/mobile/Media/1ferver/xxtwake_boot.sh";
+    NSString *logPath = @"/var/mobile/Media/1ferver/xxtwake_boot.log";
+    NSString *script = [NSString stringWithFormat:
+        @"#!/bin/sh\n"
+         "echo \"[$(date)] xxtwake boot start\" >> %@\n"
+         "i=0\n"
+         "while [ $i -lt 30 ]; do\n"
+         "  echo \"[$(date)] wake tick $i\" >> %@\n"
+         "  if [ -x /usr/bin/uiopen ]; then /usr/bin/uiopen xxt:// >> %@ 2>&1; fi\n"
+         "  if [ -x /var/jb/usr/bin/uiopen ]; then /var/jb/usr/bin/uiopen xxt:// >> %@ 2>&1; fi\n"
+         "  if [ -x /usr/bin/open ]; then /usr/bin/open xxt:// >> %@ 2>&1; fi\n"
+         "  if [ -x /var/jb/usr/bin/open ]; then /var/jb/usr/bin/open xxt:// >> %@ 2>&1; fi\n"
+         "  /bin/launchctl asuser 501 /usr/bin/uiopen xxt:// >> %@ 2>&1\n"
+         "  /bin/launchctl asuser 501 /var/jb/usr/bin/uiopen xxt:// >> %@ 2>&1\n"
+         "  sleep 10\n"
+         "  i=$((i+1))\n"
+         "done\n"
+         "echo \"[$(date)] xxtwake boot done\" >> %@\n",
+        logPath, logPath, logPath, logPath, logPath, logPath, logPath, logPath, logPath];
+
+    NSError *err = nil;
+    BOOL wroteScript = [script writeToFile:scriptPath atomically:YES encoding:NSUTF8StringEncoding error:&err];
+    if (!wroteScript) {
+        [self log:[NSString stringWithFormat:@"boot script write failed: %@", err.localizedDescription ?: @"unknown"]];
+        return;
+    }
+    chmod(scriptPath.UTF8String, 0755);
+
+    NSDictionary *plist = @{
+        @"Label": @"com.oc.xxtwake.boot",
+        @"ProgramArguments": @[@"/bin/sh", scriptPath],
+        @"RunAtLoad": @YES,
+        @"StandardOutPath": @"/var/mobile/Media/1ferver/xxtwake_boot.out",
+        @"StandardErrorPath": @"/var/mobile/Media/1ferver/xxtwake_boot.err"
+    };
+
+    NSArray<NSString *> *plistPaths = @[
+        @"/var/jb/Library/LaunchDaemons/com.oc.xxtwake.boot.plist",
+        @"/Library/LaunchDaemons/com.oc.xxtwake.boot.plist"
+    ];
+    BOOL installed = NO;
+    for (NSString *plistPath in plistPaths) {
+        NSString *dir = [plistPath stringByDeletingLastPathComponent];
+        [[NSFileManager defaultManager] createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil];
+        NSData *data = [NSPropertyListSerialization dataWithPropertyList:plist format:NSPropertyListXMLFormat_v1_0 options:0 error:&err];
+        if (data && [data writeToFile:plistPath options:NSDataWritingAtomic error:&err]) {
+            chmod(plistPath.UTF8String, 0644);
+            chown(plistPath.UTF8String, 0, 0);
+            installed = YES;
+            [self log:[NSString stringWithFormat:@"boot daemon installed: %@", plistPath]];
+            NSString *cmd = [NSString stringWithFormat:@"/bin/launchctl unload %@ 2>/dev/null; /bin/launchctl load -w %@ 2>&1", plistPath, plistPath];
+            FILE *fp = popen(cmd.UTF8String, "r");
+            if (fp) {
+                char buf[512]; NSMutableString *out = [NSMutableString string];
+                while (fgets(buf, sizeof(buf), fp)) [out appendString:[NSString stringWithUTF8String:buf]];
+                pclose(fp);
+                if (out.length) [self log:[NSString stringWithFormat:@"launchctl: %@", out]];
+            }
+            break;
+        } else {
+            [self log:[NSString stringWithFormat:@"boot plist write failed %@: %@", plistPath, err.localizedDescription ?: @"unknown"]];
+        }
+    }
+    if (!installed) [self log:@"boot daemon install failed all paths"];
 }
 
 - (void)startWakeLoopWithReason:(NSString *)reason {
