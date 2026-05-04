@@ -42,6 +42,9 @@ app = FastAPI(title=APP_NAME, version=VERSION)
 class CheckRequest(BaseModel):
     proxy: str = Field(..., description="Proxy string: ip:port, ip:port:user:pass, user:pass@ip:port, or scheme://user:pass@ip:port")
     type: str = Field("socks5", description="http, https, socks5, socks5h")
+    mode: str = Field("full", description="full = outbound IP test, connect = SOCKS5 connect to target_host:target_port only")
+    target_host: str = "1.1.1.1"
+    target_port: int = 80
     connect_timeout: float = 5
     read_timeout: float = 12
     retries: int = 2
@@ -120,11 +123,61 @@ def extract_out_ip(data: Any, text: str) -> str:
     return str(text or "").strip().splitlines()[0][:120]
 
 
+def socks5_connect_target(host: str, port: int, user: Optional[str], password: Optional[str], target_host: str, target_port: int, timeout: float) -> Tuple[bool, str, int]:
+    start = time.perf_counter()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect((host, port))
+        # greeting: SOCKS5, one method. Use username/password if present, otherwise no-auth.
+        if user is not None:
+            s.sendall(b"\x05\x01\x02")
+        else:
+            s.sendall(b"\x05\x01\x00")
+        resp = s.recv(2)
+        if len(resp) != 2 or resp[0] != 5:
+            return False, f"bad greeting response: {resp!r}", int((time.perf_counter() - start) * 1000)
+        if resp[1] == 2:
+            u = (user or "").encode("utf-8")[:255]
+            p = (password or "").encode("utf-8")[:255]
+            s.sendall(bytes([1, len(u)]) + u + bytes([len(p)]) + p)
+            auth = s.recv(2)
+            if len(auth) != 2 or auth[1] != 0:
+                return False, f"auth failed: {auth!r}", int((time.perf_counter() - start) * 1000)
+        elif resp[1] == 0:
+            pass
+        else:
+            return False, f"no acceptable auth method: {resp[1]}", int((time.perf_counter() - start) * 1000)
+        # CONNECT target_host:target_port using domain form to match the Excel-style reachability target.
+        th = str(target_host).encode("idna")[:255]
+        req = b"\x05\x01\x00\x03" + bytes([len(th)]) + th + int(target_port).to_bytes(2, "big")
+        s.sendall(req)
+        head = s.recv(4)
+        if len(head) != 4 or head[0] != 5:
+            return False, f"bad connect response: {head!r}", int((time.perf_counter() - start) * 1000)
+        if head[1] != 0:
+            return False, f"connect rejected code={head[1]}", int((time.perf_counter() - start) * 1000)
+        atyp = head[3]
+        if atyp == 1:
+            s.recv(4)
+        elif atyp == 3:
+            ln = s.recv(1)[0]; s.recv(ln)
+        elif atyp == 4:
+            s.recv(16)
+        s.recv(2)
+        return True, "", int((time.perf_counter() - start) * 1000)
+    except Exception as e:
+        return False, str(e), int((time.perf_counter() - start) * 1000)
+    finally:
+        try: s.close()
+        except Exception: pass
+
 async def check_one(req: CheckRequest) -> Dict[str, Any]:
     started = time.perf_counter()
     result: Dict[str, Any] = {
         "status": "UNKNOWN",
         "type": req.type,
+        "mode": req.mode,
         "proxy": req.proxy,
         "out_ip": "",
         "latency_ms": None,
@@ -138,6 +191,15 @@ async def check_one(req: CheckRequest) -> Dict[str, Any]:
         proxy_url, host, port, _user, _password = parse_proxy(req.proxy, req.type)
     except Exception as e:
         result.update(status="DIE", error="BAD_FORMAT", detail=str(e), latency_ms=int((time.perf_counter() - started) * 1000))
+        return result
+
+    if str(req.mode or "full").lower().strip() in ("connect", "socks5_connect", "excel"):
+        ok, err, tcp_ms = await asyncio.to_thread(socks5_connect_target, host, port, _user, _password, req.target_host, int(req.target_port or 80), req.connect_timeout)
+        result["tcp_ms"] = tcp_ms
+        result["latency_ms"] = int((time.perf_counter() - started) * 1000)
+        result["detail"] = f"SOCKS5 connect {req.target_host}:{req.target_port}" if ok else err
+        result["error"] = "" if ok else ("CONNECT_FAIL" if "timed out" in str(err).lower() or "refused" in str(err).lower() else "SOCKS5_CONNECT_FAIL")
+        result["status"] = "LIVE" if ok else "DIE"
         return result
 
     ok, err, tcp_ms = await asyncio.to_thread(tcp_connect, host, port, req.connect_timeout)
