@@ -29,7 +29,18 @@ jobs:
         run: |
           cd XXTWakeHelper
           chmod +x package_ipa.sh
-          ./package_ipa.sh .theos/obj/XXTWakeHelper.app || ./package_ipa.sh .theos/obj/debug/XXTWakeHelper.app
+          APP=""
+          for p in .theos/obj/XXTWakeHelper.app .theos/obj/debug/XXTWakeHelper.app .theos/obj/*/XXTWakeHelper.app; do
+            if [ -d "$p" ]; then APP="$p"; break; fi
+          done
+          if [ -z "$APP" ]; then
+            echo "Could not find built .app"
+            find .theos -maxdepth 5 -type d -name '*.app' -print
+            exit 1
+          fi
+          echo "Packaging $APP"
+          ./package_ipa.sh "$APP"
+          unzip -l XXTWakeHelper.ipa
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
