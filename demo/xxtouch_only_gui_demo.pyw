@@ -3069,6 +3069,13 @@ if ok_sys and sys_mod then
         if __oc_old_toast then return __oc_old_toast(msg, ...) end
     end
     package.loaded["sys"] = sys_mod
+    _G.sys = sys_mod
+elseif type(_G.sys) == "table" and type(_G.sys.toast) == "function" then
+    __oc_old_toast = _G.sys.toast
+    _G.sys.toast = function(msg, ...)
+        __oc_write_status(msg)
+        return __oc_old_toast(msg, ...)
+    end
 end
 __oc_write_status("STARTED")
 local __oc_ok, __oc_err = xpcall(function()
