@@ -18,6 +18,11 @@ local TIKTOK_BUNDLE = "com.ss.iphone.ugc.Ame"
 local TIKTOK_LITE_BUNDLE = "com.ss.iphone.ugc.tiktok.lite"
 local APPMANAGER_BUNDLE = "com.tigisoftware.ADManager"
 local TIKTOK_LITE_STORE_URL = "https://apps.apple.com/jp/app/tiktok-lite/id6447160980?l=en-US"
+local APPSTORE_BUNDLE = "com.apple.AppStore"
+local ACTIVE_APP = ""
+local ACTIVE_URL = ""
+local WATCHDOG_ENABLED = true
+local __watchdog_busy = false
 local RES_DIR = "/var/mobile/Media/1ferver/lua/examples/"
 
 local CLOUD_IMG = RES_DIR .. "cloudTTL.png"
@@ -80,7 +85,16 @@ local EVENT_COLOR_PATTERN = {
 }
 
 local function sleep(ms)
- sys.msleep(ms)
+ local remain = ms or 0
+ while remain > 0 do
+  local step = remain
+  if step > 500 then step = 500 end
+  sys.msleep(step)
+  remain = remain - step
+  if WATCHDOG_ENABLED and (not __watchdog_busy) and type(backgroundWatchdog) == "function" then
+   backgroundWatchdog()
+  end
+ end
 end
 
 local __last_status = ""
@@ -242,14 +256,37 @@ function swipeUpOnce()
  touch.up(1)
 end
 
+function setActiveApp(kind, url)
+ ACTIVE_APP = kind or ""
+ ACTIVE_URL = url or ACTIVE_URL or ""
+end
+function clearActiveApp(kind)
+ if kind == nil or ACTIVE_APP == kind then ACTIVE_APP = "" end
+end
+function ensureActiveApp()
+ if ACTIVE_APP == "tiktok_lite" then
+  if app.front_bid() ~= TIKTOK_LITE_BUNDLE then app.run(TIKTOK_LITE_BUNDLE) sys.msleep(2500) end
+ elseif ACTIVE_APP == "appmanager" then
+  if app.front_bid() ~= APPMANAGER_BUNDLE then app.run(APPMANAGER_BUNDLE) sys.msleep(2500) end
+ elseif ACTIVE_APP == "appstore" then
+  if app.front_bid() ~= APPSTORE_BUNDLE then
+   if ACTIVE_URL and ACTIVE_URL ~= "" then app.open_url(ACTIVE_URL) else app.run(APPSTORE_BUNDLE) end
+   sys.msleep(4000)
+  end
+ end
+end
 function quitApp(bundleId, label)
  phase("Quit " .. label)
+ if bundleId == TIKTOK_LITE_BUNDLE then clearActiveApp("tiktok_lite") end
+ if bundleId == APPMANAGER_BUNDLE then clearActiveApp("appmanager") end
  app.quit(bundleId)
  waitPhase(1500)
 end
 
 function openApp(bundleId, label, waitMs)
  phase("Mở " .. label)
+ if bundleId == APPMANAGER_BUNDLE then setActiveApp("appmanager") end
+ if bundleId == TIKTOK_LITE_BUNDLE then setActiveApp("tiktok_lite") end
  app.run(bundleId)
  waitPhase(waitMs or 4000)
 end
@@ -305,6 +342,7 @@ end
 
 function openTikTokLiteStore()
  phase("Mở link TikTok Lite")
+ setActiveApp("appstore", TIKTOK_LITE_STORE_URL)
  app.open_url(TIKTOK_LITE_STORE_URL)
  waitPhase(8000)
  app.open_url(TIKTOK_LITE_STORE_URL)
@@ -431,6 +469,7 @@ end
 
 function openTikTokLite()
  phase("Mở TikTok Lite")
+ setActiveApp("tiktok_lite")
  app.run(TIKTOK_LITE_BUNDLE)
  waitPhase(30000)
 end
@@ -564,6 +603,29 @@ function handleNoInternetSpecial()
   waitPhase(1000)
   ::continue_loop::
  end
+end
+
+
+function backgroundWatchdog()
+ if __watchdog_busy then return false end
+ __watchdog_busy = true
+ local old_status = __last_status
+ local ok = false
+ pcall(function()
+  ensureActiveApp()
+  if handleError1UntilClear() then ok = true return end
+  if handleError2Tap() then ok = true return end
+  if handlePopupByImage("Popup welcome", CHECK_POPUP_WELLCOME, TAP_POPUP_WELLCOME) then ok = true return end
+  if handlePopupPermiss() then ok = true return end
+  if handlePopupByImage("Popup allow", CHECK_POPUP_ALLOW, TAP_POPUP_ALLOW) then ok = true return end
+  if handlePopupByImage("Popup tapping", CHECK_POPUP_TAPPING, TAP_POPUP_TAPPING) then ok = true return end
+  if handlePopupTrack() then ok = true return end
+  if handlePopupChoose() then ok = true return end
+  if handlePopupSwipe() then ok = true return end
+ end)
+ __last_status = old_status
+ __watchdog_busy = false
+ return ok
 end
 
 function runStage2()
