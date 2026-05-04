@@ -3049,8 +3049,12 @@ class XXTouchOnlyDemo(tk.Tk):
         return f'''
 local __oc_status_path = "{safe_path}"
 local __oc_old_toast = nil
+local __oc_last_status = ""
 local function __oc_write_status(msg)
     msg = tostring(msg or "")
+    if msg ~= "" and msg ~= "STARTED" and not string.match(msg, "^ERROR") and msg ~= "FINISHED_OK" then
+        __oc_last_status = msg
+    end
     local line = tostring(os.time()) .. "|" .. msg
     local wrote = false
     local ok_file, file = pcall(require, "file")
@@ -3091,7 +3095,12 @@ end, debug.traceback)
 if __oc_ok then
     __oc_write_status("FINISHED_OK")
 else
-    __oc_write_status("ERROR: " .. tostring(__oc_err))
+    local __oc_err_text = tostring(__oc_err)
+    if __oc_last_status ~= "" then
+        __oc_write_status("ERROR sau bước [" .. __oc_last_status .. "]: " .. __oc_err_text)
+    else
+        __oc_write_status("ERROR: " .. __oc_err_text)
+    end
     error(__oc_err)
 end
 '''.lstrip()
