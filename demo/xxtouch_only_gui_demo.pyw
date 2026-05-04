@@ -305,6 +305,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self._router_log_refresh_pending = set()
         self._router_mini_log_refresh_pending = set()
         self._router_devices_refresh_pending = set()
+        self._external_status_seen = {}
         self.router_file_widgets = {}
         self.router_uid_trees = {}
         self.router_uid_status_labels = {}
@@ -1439,8 +1440,46 @@ class XXTouchOnlyDemo(tk.Tk):
         states_count = len(router.get('_machine_status', {}) or {})
         # 1000 rows update every second will freeze Tk. Keep near-realtime but avoid UI death.
         interval = 2500 if states_count >= 800 else (1500 if states_count >= 300 else 1000)
+        self._poll_external_lua_status(router)
         self._refresh_router_logs(router)
         self.after(interval, lambda r=router: self._refresh_router_status_tick(r))
+
+    def _poll_external_lua_status(self, router):
+        rows = list(router.get('rows', []) or [])
+        if not rows:
+            return
+        states_count = len(router.get('_machine_status', {}) or {})
+        limit = 40 if states_count < 300 else 20
+        for row in rows[:limit]:
+            ip = str(row.get('ip') or '').strip()
+            machine = str(row.get('machine', '?')).strip() or '?'
+            if not ip:
+                continue
+            try:
+                client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=0.35, read_timeout=0.8)
+                paths = [
+                    f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt',
+                    '/var/mobile/Media/1ferver/lua/examples/oc_status.txt',
+                ]
+                raw = ''
+                for path in paths:
+                    raw = self._read_lua_status_text(client, path)
+                    if raw:
+                        break
+                status_text = str(raw or '').strip()
+                if not status_text:
+                    continue
+                key = (id(router), machine)
+                if self._external_status_seen.get(key) == status_text:
+                    continue
+                self._external_status_seen[key] = status_text
+                mode = 'error' if status_text.startswith('ERROR') else ('ok' if status_text in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status_text else 'running')
+                task = row.get('selected_script') or row.get('ui_selected_script') or 'Lua trực tiếp'
+                row['note'] = status_text
+                row['updated'] = now_text()
+                self._set_machine_status(router, row, task, status_text, mode=mode)
+            except Exception:
+                continue
 
     def _refresh_router_logs(self, router):
         widget = self.router_logs_widgets.get(id(router))
