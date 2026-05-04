@@ -1525,16 +1525,26 @@ class XXTouchOnlyDemo(tk.Tk):
                             f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt',
                             '/var/mobile/Media/1ferver/lua/examples/oc_status.txt',
                         ]
-                        raw = ''
+                        best_ts = -1
+                        best_text = ''
                         for path in paths:
                             raw = self._read_lua_status_text(client, path)
-                            if raw:
-                                break
-                        status_text = str(raw or '').strip()
-                        if not status_text:
-                            continue
-                        if '|' in status_text:
-                            status_text = status_text.rsplit('|', 1)[-1].strip()
+                            raw_text = str(raw or '').strip()
+                            if not raw_text:
+                                continue
+                            ts = 0
+                            msg = raw_text
+                            if '|' in raw_text:
+                                left, right = raw_text.rsplit('|', 1)
+                                msg = right.strip()
+                                try:
+                                    ts = int(str(left).strip().split()[-1])
+                                except Exception:
+                                    ts = 0
+                            if ts >= best_ts:
+                                best_ts = ts
+                                best_text = msg
+                        status_text = best_text.strip()
                         if not status_text:
                             continue
                         status_text = self._clean_status_text(status_text)
