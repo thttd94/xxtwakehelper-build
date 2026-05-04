@@ -1469,7 +1469,7 @@ class XXTouchOnlyDemo(tk.Tk):
         rows_all = list(router.get('rows', []) or [])
         if not rows_all:
             return
-        batch = 25 if force else 10
+        batch = 200 if force else 25
         start = int(self._external_status_poll_cursor.get(router_id, 0) or 0) % max(1, len(rows_all))
         rows = rows_all[start:start + batch]
         if len(rows) < batch:
