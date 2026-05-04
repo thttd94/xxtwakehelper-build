@@ -1,0 +1,38 @@
+name: Build XXTWakeHelper IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'XXTWakeHelper/**'
+      - '.github/workflows/build-xxtwakehelper.yml'
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          brew install ldid xz
+
+      - name: Build app
+        run: |
+          cd XXTWakeHelper
+          make clean
+          make FINALPACKAGE=1
+
+      - name: Package IPA
+        run: |
+          cd XXTWakeHelper
+          chmod +x package_ipa.sh
+          ./package_ipa.sh .theos/obj/XXTWakeHelper.app || ./package_ipa.sh .theos/obj/debug/XXTWakeHelper.app
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: XXTWakeHelper-ipa
+          path: XXTWakeHelper/XXTWakeHelper.ipa
