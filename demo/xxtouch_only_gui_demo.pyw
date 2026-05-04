@@ -1291,14 +1291,14 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Button(head, text='Mở file log', command=lambda: self._open_log_file()).pack(side='right')
         wrap = ttk.Frame(card, style='Card.TFrame')
         wrap.pack(fill='both', expand=True)
-        columns = ('time', 'machine', 'task', 'status', 'timer')
+        columns = ('time', 'machine', 'task', 'status', 'state')
         tree = ttk.Treeview(wrap, columns=columns, show='headings', height=26)
         headings = {
             'time': ('Thời gian', 115),
             'machine': ('Số máy', 80),
             'task': ('Tác vụ', 150),
             'status': ('Status', 680),
-            'timer': ('Đếm giờ', 150),
+            'state': ('Trạng thái', 150),
         }
         for col, (title, width) in headings.items():
             tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
@@ -1368,6 +1368,19 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_status_sort[rid] = {'column': column, 'reverse': reverse}
         self._refresh_router_logs(router)
 
+    def _status_state_text(self, st):
+        mode = str((st or {}).get('mode') or '').lower()
+        status = str((st or {}).get('status') or '')
+        if mode == 'error' or status.startswith('ERROR'):
+            return 'Lỗi'
+        if mode == 'ok' or status in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status:
+            return 'Chạy xong'
+        if mode == 'wait':
+            return 'Đang chờ'
+        if mode == 'idle':
+            return 'Đang chờ'
+        return 'Đang chạy'
+
     def _status_sort_value(self, st, column):
         if column == 'machine':
             return self._machine_sort_key(st.get('machine', ''))
@@ -1377,11 +1390,8 @@ class XXTouchOnlyDemo(tk.Tk):
             return str(st.get('task', '')).lower()
         if column == 'status':
             return str(st.get('status', '')).lower()
-        if column == 'timer':
-            try:
-                return float(st.get('_timer_seconds', 0))
-            except Exception:
-                return 0
+        if column == 'state':
+            return self._status_state_text(st).lower()
         return str(st.get(column, '')).lower()
 
     def _schedule_router_status_refresh(self, router, delay_ms=250):
@@ -1610,7 +1620,7 @@ class XXTouchOnlyDemo(tk.Tk):
             prepared.sort(key=lambda item: self._status_sort_value(item[1], sort_col), reverse=reverse)
             for machine, st in prepared:
                 timer = st.get('_timer_text', '')
-                values = (st.get('time', ''), machine, st.get('task', ''), st.get('status', ''), timer)
+                values = (st.get('time', ''), machine, st.get('task', ''), st.get('status', ''), self._status_state_text(st))
                 tag = st.get('mode') or 'idle'
                 if machine in existing:
                     widget.item(machine, values=values, tags=(tag,))
