@@ -3052,12 +3052,19 @@ local __oc_old_toast = nil
 local function __oc_write_status(msg)
     msg = tostring(msg or "")
     local line = tostring(os.time()) .. "|" .. msg
+    local wrote = false
     local ok_file, file = pcall(require, "file")
-    if ok_file and file and file.writes then
-        pcall(file.writes, __oc_status_path, line)
-    else
+    if ok_file and file then
+        if type(file.writes) == "function" then
+            wrote = pcall(file.writes, __oc_status_path, line) or wrote
+        end
+        if (not wrote) and type(file.write) == "function" then
+            wrote = pcall(file.write, __oc_status_path, line) or wrote
+        end
+    end
+    if not wrote then
         local f = io.open(__oc_status_path, "w")
-        if f then f:write(line) f:close() end
+        if f then f:write(line) f:close() wrote = true end
     end
     print("OC_STATUS:" .. msg)
 end
