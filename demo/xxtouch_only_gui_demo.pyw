@@ -1521,30 +1521,22 @@ class XXTouchOnlyDemo(tk.Tk):
                         continue
                     try:
                         client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=0.25, read_timeout=0.5)
+                        # Lua chạy trực tiếp trên client ghi vào oc_status.txt.
+                        # oc_status_<máy>.txt thường là status wrapper cũ khi chạy từ PYW, có thể bị stale.
                         paths = [
-                            f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt',
                             '/var/mobile/Media/1ferver/lua/examples/oc_status.txt',
+                            f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt',
                         ]
-                        best_ts = -1
-                        best_text = ''
+                        status_text = ''
                         for path in paths:
                             raw = self._read_lua_status_text(client, path)
                             raw_text = str(raw or '').strip()
                             if not raw_text:
                                 continue
-                            ts = 0
-                            msg = raw_text
                             if '|' in raw_text:
-                                left, right = raw_text.rsplit('|', 1)
-                                msg = right.strip()
-                                try:
-                                    ts = int(str(left).strip().split()[-1])
-                                except Exception:
-                                    ts = 0
-                            if ts >= best_ts:
-                                best_ts = ts
-                                best_text = msg
-                        status_text = best_text.strip()
+                                raw_text = raw_text.rsplit('|', 1)[-1].strip()
+                            status_text = raw_text
+                            break
                         if not status_text:
                             continue
                         status_text = self._clean_status_text(status_text)
