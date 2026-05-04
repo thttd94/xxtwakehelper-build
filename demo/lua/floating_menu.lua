@@ -1,4 +1,31 @@
 local sys = require("sys")
+
+
+-- OpenClaw/PYW status sync: write readable status for GUI polling even when run directly on client.
+local OC_STATUS_PATH = rawget(_G, "OC_STATUS_PATH") or "/var/mobile/Media/1ferver/lua/examples/oc_status.txt"
+function oc_status(text)
+    text = tostring(text or "")
+    if type(__oc_write_status) == "function" then pcall(__oc_write_status, text) end
+    pcall(function()
+        local line = tostring(os.time()) .. "|" .. text
+        local wrote = false
+        local ok_file, file = pcall(require, "file")
+        if ok_file and file then
+            if type(file.writes) == "function" then local ok = pcall(file.writes, OC_STATUS_PATH, line); wrote = ok or wrote end
+            if (not wrote) and type(file.write) == "function" then local ok = pcall(file.write, OC_STATUS_PATH, line); wrote = ok or wrote end
+        end
+        if not wrote then
+            local f = io.open(OC_STATUS_PATH, "w")
+            if f then f:write(line) f:close() end
+        end
+    end)
+end
+function oc_toast(text, ...)
+    text = tostring(text or "")
+    oc_status(text)
+    if sys and type(sys.toast) == "function" then return sys.toast(text, ...) end
+end
+
 local app = require("app")
 local file = require("file")
 local webview = require("webview")
@@ -7,7 +34,7 @@ local TOUCH_ID_IMG = "/var/mobile/Media/1ferver/lua/examples/touchID.png"
 local touch_id_x, touch_id_y = screen.find_image(TOUCH_ID_IMG, 82, 0, 0, 750, 1334)
 if touch_id_x ~= -1 then
     touch.tap(381, 792)
-    sys.toast("Tapped Touch ID", 1)
+    oc_toast("Tapped Touch ID", 1)
     sys.msleep(1000)
 end
 
@@ -256,11 +283,11 @@ local function run_lua_file(path)
     if fn then
       return pcall(fn)
     else
-      sys.toast('load lỗi')
+      oc_toast('load lỗi')
       return false, err
     end
   end
-  sys.toast('không thấy file')
+  oc_toast('không thấy file')
   return false
 end
 
@@ -318,7 +345,7 @@ local function run_home(front_name)
   set_active('home')
   set_top_status((front_name or 'App') .. ': Home đang chạy')
   app.run(BID_HOME)
-  sys.toast('HOME')
+  oc_toast('HOME')
   sys.msleep(500)
   keep_state('home')
 end
@@ -343,7 +370,7 @@ local function run_video(front_name)
     return ok
   end
   set_top_status((front_name or 'App') .. ': Không đúng app cho Video')
-  sys.toast('Không phải TikTok/Lite')
+  oc_toast('Không phải TikTok/Lite')
   sys.msleep(700)
   keep_state('video')
   return false
@@ -365,7 +392,7 @@ local function run_claim(front_name)
     return ok
   end
   set_top_status('Other: Không đúng app')
-  sys.toast('Không phải TikTok/Lite')
+  oc_toast('Không phải TikTok/Lite')
   sys.msleep(700)
   keep_state('claim')
   return false
@@ -391,7 +418,7 @@ local function run_20p(front_name)
     return ok
   end
   set_top_status('Other: Không đúng app')
-  sys.toast('Không phải TikTok/Lite')
+  oc_toast('Không phải TikTok/Lite')
   sys.msleep(700)
   keep_state('20p')
   return false
@@ -406,28 +433,28 @@ local function run_clear(front_name)
   if current_menu_mode == 'home' and current_home_submenu == 'tiktok' then
     set_top_status('HOME: Xóa app TikTok')
     pcall(app.uninstall, BID_TIKTOK)
-    sys.toast('Đã xóa TikTok')
+    oc_toast('Đã xóa TikTok')
     sys.msleep(700)
     keep_state('clear')
     return true
   elseif current_menu_mode == 'home' and current_home_submenu == 'lite' then
     set_top_status('HOME: Xóa app TikTokLite')
     pcall(app.uninstall, BID_TIKTOK_LITE)
-    sys.toast('Đã xóa TikTokLite')
+    oc_toast('Đã xóa TikTokLite')
     sys.msleep(700)
     keep_state('clear')
     return true
   elseif bid == BID_TIKTOK then
     set_top_status('TikTok: Đóng app')
     pcall(app.quit, BID_TIKTOK)
-    sys.toast('Đã đóng TikTok')
+    oc_toast('Đã đóng TikTok')
     sys.msleep(700)
     keep_state('clear')
     return true
   elseif bid == BID_TIKTOK_LITE then
     set_top_status('TikTokLite: Đóng app')
     pcall(app.quit, BID_TIKTOK_LITE)
-    sys.toast('Đã đóng TikTokLite')
+    oc_toast('Đã đóng TikTokLite')
     sys.msleep(700)
     keep_state('clear')
     return true
@@ -460,7 +487,7 @@ local function run_clear(front_name)
     pcall(app.quit, ids[i])
     sys.msleep(300)
   end
-  sys.toast('Đã đóng ứng dụng')
+  oc_toast('Đã đóng ứng dụng')
   sys.msleep(700)
   keep_state('clear')
   return true
@@ -472,7 +499,7 @@ local function run_open_tiktok()
   set_active('tiktok')
   set_top_status('HOME: mở TikTok')
   app.run(BID_TIKTOK)
-  sys.toast('Mở TikTok')
+  oc_toast('Mở TikTok')
   sys.msleep(700)
   keep_state('tiktok')
   return true
@@ -484,7 +511,7 @@ local function run_open_lite()
   set_active('lite')
   set_top_status('HOME: mở TikTokLite')
   app.run(BID_TIKTOK_LITE)
-  sys.toast('Mở TikTokLite')
+  oc_toast('Mở TikTokLite')
   sys.msleep(700)
   keep_state('lite')
   return true
@@ -518,13 +545,13 @@ local function run_home_install()
   if current_home_submenu == 'tiktok' then
     set_top_status('HOME TikTok: Tải app đang mở')
     app.open_url('https://apps.apple.com/jp/app/tiktok-%E3%83%86%E3%82%A3%E3%83%83%E3%82%AF%E3%83%88%E3%83%83%E3%82%AF/id1235601864')
-    sys.toast('Mở link tải TikTok')
+    oc_toast('Mở link tải TikTok')
     sys.msleep(700)
     return true
   elseif current_home_submenu == 'lite' then
     set_top_status('HOME Lite: Tải app đang mở')
     app.open_url('https://apps.apple.com/jp/app/tiktok-lite/id6447160980?l=en-US')
-    sys.toast('Mở link tải TikTokLite')
+    oc_toast('Mở link tải TikTokLite')
     sys.msleep(700)
     return true
   end

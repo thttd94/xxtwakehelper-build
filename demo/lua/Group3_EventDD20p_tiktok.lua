@@ -1,3 +1,30 @@
+
+
+-- OpenClaw/PYW status sync: write readable status for GUI polling even when run directly on client.
+local OC_STATUS_PATH = rawget(_G, "OC_STATUS_PATH") or "/var/mobile/Media/1ferver/lua/examples/oc_status.txt"
+function oc_status(text)
+    text = tostring(text or "")
+    if type(__oc_write_status) == "function" then pcall(__oc_write_status, text) end
+    pcall(function()
+        local line = tostring(os.time()) .. "|" .. text
+        local wrote = false
+        local ok_file, file = pcall(require, "file")
+        if ok_file and file then
+            if type(file.writes) == "function" then local ok = pcall(file.writes, OC_STATUS_PATH, line); wrote = ok or wrote end
+            if (not wrote) and type(file.write) == "function" then local ok = pcall(file.write, OC_STATUS_PATH, line); wrote = ok or wrote end
+        end
+        if not wrote then
+            local f = io.open(OC_STATUS_PATH, "w")
+            if f then f:write(line) f:close() end
+        end
+    end)
+end
+function oc_toast(text, ...)
+    text = tostring(text or "")
+    oc_status(text)
+    if sys and type(sys.toast) == "function" then return sys.toast(text, ...) end
+end
+
 local status_bridge = require("status_bridge")
 status_bridge.attach({ override_toast = true, override_nlog = true })
 
