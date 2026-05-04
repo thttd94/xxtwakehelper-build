@@ -474,7 +474,6 @@ class XXTouchOnlyDemo(tk.Tk):
             ('GỠ APP RÁC', lambda r=router: self._run_background(r, self._run_clear_app_for_router)),
             ('RE-ACTION', lambda r=router: self._run_background(r, self._rerun_last_failed_action_for_router)),
             ('CHỌN FILE', lambda r=router: self._choose_files_for_router(r)),
-            ('SYNC EXAMPLES', lambda r=router: self._sync_examples_from_repo_for_router(r)),
             ('SEND FILE', lambda r=router: self._open_send_file_dest_popup(r)),
         ]
         for text, cmd in primary_specs:
