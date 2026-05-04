@@ -4,16 +4,16 @@ app = require("app")
 file = require("file")
 
 local links = {
- "https://www.tiktok.com/t/ZSHoJkxP6/",
- "https://www.tiktok.com/t/ZSHoJvPdS",
- "https://www.tiktok.com/t/ZSHodvDhG",
- "https://www.tiktok.com/t/ZSHodCJUU/",
- "https://www.tiktok.com/t/ZSHodXPJh/",
- "https://www.tiktok.com/t/ZSHodwDAy/",
- "https://www.tiktok.com/t/ZSHodquAk/",
- "https://www.tiktok.com/t/ZSHo64x5h/",
- "https://www.tiktok.com/t/ZSHo6yxet/",
- "https://www.tiktok.com/t/ZSHoksvp6/",
+ "https://lite.tiktok.com/t/ZSHoJkxP6/",
+ "https://lite.tiktok.com/t/ZSHoJvPdS",
+ "https://lite.tiktok.com/t/ZSHodvDhG",
+ "https://lite.tiktok.com/t/ZSHodCJUU/",
+ "https://lite.tiktok.com/t/ZSHodXPJh/",
+ "https://lite.tiktok.com/t/ZSHodwDAy/",
+ "https://lite.tiktok.com/t/ZSHodquAk/",
+ "https://lite.tiktok.com/t/ZSHo64x5h/",
+ "https://lite.tiktok.com/t/ZSHo6yxet/",
+ "https://lite.tiktok.com/t/ZSHoksvp6/",
 }
 
 local repeat_count = 3
@@ -92,7 +92,7 @@ if claim_code and #tostring(claim_code) > 0 then
  if fn then
   local ok, run_err = pcall(fn)
   if ok then
-   status("EventVideo180 TikTok chạy xong")
+   status("EventVideo180 TikTok Lite chạy xong")
    return true
   end
   status("ERROR: claim video lỗi: " .. tostring(run_err))
