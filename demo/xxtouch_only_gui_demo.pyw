@@ -1529,9 +1529,19 @@ class XXTouchOnlyDemo(tk.Tk):
     def _finish_external_status_poll(self, router, router_id, updates):
         self._external_status_poll_running.discard(router_id)
         for row, task, status_text, mode in updates:
+            status_text = str(status_text or '').strip()
+            if not status_text:
+                continue
             row['note'] = status_text
             row['updated'] = now_text()
             self._set_machine_status(router, row, task, status_text, mode=mode)
+            try:
+                machine = row.get('machine', '?')
+                self._append_router_log(router, f'[{machine}] {task}: {status_text}')
+            except Exception:
+                pass
+        if updates:
+            self._refresh_router_logs(router)
 
     def _refresh_router_logs(self, router):
         widget = self.router_logs_widgets.get(id(router))
