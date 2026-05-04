@@ -1439,9 +1439,29 @@ class XXTouchOnlyDemo(tk.Tk):
         }
         self._schedule_router_status_refresh(router)
 
+    def _ensure_router_status_rows(self, router):
+        if not isinstance(router, dict):
+            return
+        states = router.setdefault('_machine_status', {})
+        for row in list(router.get('rows', []) or []):
+            machine = str(row.get('machine', '?')).strip() or '?'
+            if not machine or machine in states:
+                continue
+            states[machine] = {
+                'time': str(row.get('updated') or ''),
+                'machine': machine,
+                'task': str(row.get('selected_script') or row.get('ui_selected_script') or ''),
+                'status': str(row.get('note') or 'Chờ status'),
+                'mode': 'idle',
+                'countdown': None,
+                'started_at': time.time(),
+                'updated_at': 0,
+            }
+
     def _refresh_router_status_tick(self, router):
         if not isinstance(router, dict):
             return
+        self._ensure_router_status_rows(router)
         if self.router_status_widgets.get(id(router)) is None:
             return
         states_count = len(router.get('_machine_status', {}) or {})
@@ -1547,6 +1567,7 @@ class XXTouchOnlyDemo(tk.Tk):
         widget = self.router_logs_widgets.get(id(router))
         if widget is None:
             return
+        self._ensure_router_status_rows(router)
         if hasattr(widget, 'get_children'):
             states = router.setdefault('_machine_status', {})
             existing = set(widget.get_children(''))
