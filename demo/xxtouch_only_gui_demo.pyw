@@ -1296,8 +1296,8 @@ class XXTouchOnlyDemo(tk.Tk):
         headings = {
             'time': ('Thời gian', 115),
             'machine': ('Số máy', 80),
-            'task': ('Tác vụ đang chạy', 300),
-            'status': ('Status', 360),
+            'task': ('Tác vụ', 150),
+            'status': ('Status', 680),
             'timer': ('Đếm giờ', 150),
         }
         for col, (title, width) in headings.items():
@@ -1439,6 +1439,19 @@ class XXTouchOnlyDemo(tk.Tk):
         }
         self._schedule_router_status_refresh(router)
 
+    def _clean_status_text(self, text):
+        text = str(text or '').replace('\r', ' ').replace('\n', ' ').strip()
+        if '|' in text:
+            text = text.rsplit('|', 1)[-1].strip()
+        for marker in ['stack traceback:', '\\tstack traceback:', ' traceback:', '\\t[C]:', ' [C]:']:
+            idx = text.find(marker)
+            if idx >= 0:
+                text = text[:idx].strip()
+        text = text.replace('ERROR sau bước', 'ERROR sau bước')
+        if len(text) > 220:
+            text = text[:220].rstrip() + '...'
+        return text
+
     def _ensure_router_status_rows(self, router):
         if not isinstance(router, dict):
             return
@@ -1524,6 +1537,7 @@ class XXTouchOnlyDemo(tk.Tk):
                             status_text = status_text.rsplit('|', 1)[-1].strip()
                         if not status_text:
                             continue
+                        status_text = self._clean_status_text(status_text)
                         key = (router_id, machine)
                         if self._external_status_seen.get(key) == status_text:
                             continue
