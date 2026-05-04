@@ -24,6 +24,11 @@ local function status(text)
  return true
 end
 
+local function failStatus(text)
+ status("ERROR: " .. tostring(text or "Lỗi script"))
+ error(tostring(text or "Lỗi script"))
+end
+
 local function wait_countdown(ms, label)
  local remain = ms
  local lastShown = -1
@@ -66,15 +71,20 @@ local function run_once(round)
 
  status("EventVideo180 TikTok lần " .. tostring(round) .. " đang chạy")
 
+ status("Đóng TikTok/Safari cũ")
  pcall(app.quit, "com.ss.iphone.ugc.Ame")
  pcall(app.quit, "com.apple.mobilesafari")
  sys.msleep(1200)
 
  local pick = links[math.random(1, #links)]
- app.open_url(pick)
+ status("Mở link video")
+ local ok_open = pcall(app.open_url, pick)
+ if not ok_open then failStatus("Không mở được link video") end
+ status("Chờ video 60s")
  sys.msleep(60000)
  status("Vuốt lên xem video kế tiếp")
  swipe_vertical(1080, 260)
+ status("Chờ video sau 10s")
  sys.msleep(10000)
  status("Vuốt xuống quay về video trước đó")
  swipe_vertical(320, 1120)
@@ -95,13 +105,10 @@ if claim_code and #tostring(claim_code) > 0 then
    status("EventVideo180 TikTok chạy xong")
    return true
   end
-  status("ERROR: claim video lỗi: " .. tostring(run_err))
-  error(run_err)
+  failStatus("claim video lỗi: " .. tostring(run_err))
  else
-  status("ERROR: load claim lỗi: " .. tostring(err))
-  error(err)
+  failStatus("load claim lỗi: " .. tostring(err))
  end
 end
 
-status("ERROR: không thấy Group3_ClaimVideo.lua")
-error("không thấy Group3_ClaimVideo.lua")
+failStatus("không thấy Group3_ClaimVideo.lua")

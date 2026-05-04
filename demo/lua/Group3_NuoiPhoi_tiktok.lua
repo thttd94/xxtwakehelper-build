@@ -13,15 +13,10 @@ clear.app_data("com.ss.iphone.ugc.tiktok.lite")
 sys.toast("clear tiktok done", 1)
 sys.msleep(1000)
 
-local SCRIPT_VERSION = "3.6"
+local SCRIPT_VERSION = "3.5"
 local STAGE3_TIMEOUT_SEC = 3600
 local stage3_started_at = nil
 local restart_from_stage1 = false
-local ACTIVE_APP = ""
-local ACTIVE_URL = ""
-local APPSTORE_BUNDLE = "com.apple.AppStore"
-local WATCHDOG_ENABLED = true
-local __watchdog_busy = false
 
 local function beginStage3Watch()
  stage3_started_at = os.time()
@@ -52,16 +47,7 @@ local function shouldRestartFromStage3()
 end
 
 local function sleep(ms)
- local remain = ms or 0
- while remain > 0 do
-  local step = remain
-  if step > 500 then step = 500 end
-  sys.msleep(step)
-  remain = remain - step
-  if WATCHDOG_ENABLED and (not __watchdog_busy) and type(backgroundWatchdog) == "function" then
-   backgroundWatchdog()
-  end
- end
+ sys.msleep(ms)
 end
 
 local __last_status = ""
@@ -84,6 +70,11 @@ function status(t)
   __last_status = text
   __last_status_at = now
  end
+end
+
+local function failStatus(t)
+ status("ERROR: " .. tostring(t or "Lỗi script"))
+ error(tostring(t or "Lỗi script"))
 end
 
 function phase(t)
@@ -261,29 +252,10 @@ function handlePopup8Fixed()
 end
 function hasAppStoreInstallError() return screen.is_colors(APPSTORE_INSTALL_ERROR, 88) end
 function handleAppStoreInstallError() if not hasAppStoreInstallError() then return false end phase("Lỗi cài TikTok") touch.tap(337, 685) waitPhase(1500) return true end
-function setActiveApp(kind, url)
- ACTIVE_APP = kind or ""
- ACTIVE_URL = url or ACTIVE_URL or ""
-end
-function clearActiveApp(kind)
- if kind == nil or ACTIVE_APP == kind then ACTIVE_APP = "" end
-end
-function ensureActiveApp()
- if ACTIVE_APP == "tiktok" then
-  if app.front_bid() ~= TIKTOK_BUNDLE then app.run(TIKTOK_BUNDLE) sys.msleep(2500) end
- elseif ACTIVE_APP == "appmanager" then
-  if app.front_bid() ~= APPMANAGER_BUNDLE then app.run(APPMANAGER_BUNDLE) sys.msleep(2500) end
- elseif ACTIVE_APP == "appstore" then
-  if app.front_bid() ~= APPSTORE_BUNDLE then
-   if ACTIVE_URL and ACTIVE_URL ~= "" then app.open_url(ACTIVE_URL) else app.run(APPSTORE_BUNDLE) end
-   sys.msleep(4000)
-  end
- end
-end
-function openTikTok() phase("Mở TikTok") setActiveApp("tiktok") app.run(TIKTOK_BUNDLE) waitPhase(10000) end
-function closeTikTok() phase("Đóng TikTok") clearActiveApp("tiktok") app.quit(TIKTOK_BUNDLE) waitPhase(1500) end
-function closeAppManager() phase("Đóng AppManager") clearActiveApp("appmanager") app.quit(APPMANAGER_BUNDLE) waitPhase(1500) end
-function openAppManager() phase("Mở AppManager") setActiveApp("appmanager") app.run(APPMANAGER_BUNDLE) waitPhase(4000) end
+function openTikTok() phase("Mở TikTok") app.run(TIKTOK_BUNDLE) waitPhase(10000) end
+function closeTikTok() phase("Đóng TikTok") app.quit(TIKTOK_BUNDLE) waitPhase(1500) end
+function closeAppManager() phase("Đóng AppManager") app.quit(APPMANAGER_BUNDLE) waitPhase(1500) end
+function openAppManager() phase("Mở AppManager") app.run(APPMANAGER_BUNDLE) waitPhase(4000) end
 function hasPopupActive()
  if findAnyImage(POPUP_1_CHECK, 88, 0, 0, 750, 1334) then return true end
  if findAnyImage(POPUP_2_CHECK, 88, 0, 0, 750, 1334) then return true end
@@ -385,24 +357,6 @@ function handleOnePopup()
  status("Không match popup")
  return false
 end
-function backgroundWatchdog()
- if __watchdog_busy then return false end
- __watchdog_busy = true
- local old_status = __last_status
- local ok = false
- pcall(function()
-  ensureActiveApp()
-  if hasPopupActive() then
-   waitPopupStableFast()
-   ok = handleOnePopup() or false
-   if ok then sys.msleep(400) end
-  end
- end)
- __last_status = old_status
- __watchdog_busy = false
- return ok
-end
-
 function runTikTokPopupFlow(maxSeconds)
  local startTime = os.time() local lastShown = -1 maxSeconds = maxSeconds or 120 popup_cleared = false phase("Xử lý popup")
  while os.time() - startTime < maxSeconds do
@@ -564,7 +518,7 @@ function stage2DownloadTikTokOnce()
  local CLOUD_X1 = 250 local CLOUD_Y1 = 500 local CLOUD_X2 = 430 local CLOUD_Y2 = 700
  local CANNOT_X1 = 80 local CANNOT_Y1 = 380 local CANNOT_X2 = 670 local CANNOT_Y2 = 860
  local RETRY_X1 = 180 local RETRY_Y1 = 600 local RETRY_X2 = 560 local RETRY_Y2 = 900
- local function openStoreTikTok() phase("Mở AppStore") setActiveApp("appstore", tiktok_store_url) app.quit("com.apple.AppStore") waitPhase(1500) app.open_url(tiktok_store_url) waitPhase(6000) end
+ local function openStoreTikTok() phase("Mở AppStore") app.quit("com.apple.AppStore") waitPhase(1500) app.open_url(tiktok_store_url) waitPhase(6000) end
  local function hasAnyCheckTai() if findImage(CHECK_TAI_1, 82, 0, 0, 750, 1334) then return true end if findImage(CHECK_TAI_2, 82, 0, 0, 750, 1334) then return true end if findImage(CHECK_TAI_3, 82, 0, 0, 750, 1334) then return true end return false end
  local function hasCloud() local ok = findImage(CLOUD_IMG, 82, CLOUD_X1, CLOUD_Y1, CLOUD_X2, CLOUD_Y2) return ok == true end
  local function hasOpen() local ok = findImage(OPEN_IMG, 82, 0, 0, 750, 1334) return ok == true end
@@ -630,4 +584,5 @@ while true do
  elseif current_stage == 3 then if not stage3_started_at then beginStage3Watch() end phase("Stage 3") if stage3OpenTikTokOnce() then clearStage3Watch() current_stage = 4 else if shouldRestartFromStage3() then current_stage = 1 clearStage3Watch() closeTikTok() closeAppManager() app.quit("com.apple.Preferences") app.quit("com.apple.AppStore") else closeTikTok() end waitPhase(1500) end
  elseif current_stage == 4 then clearStage3Watch() phase("Stage 4") if stage4BackupTikTokOnce() then tapBackupOk() break else closeTikTok() closeAppManager() waitPhase(1500) end end
 end
-return
+status("ALL DONE")
+return true
