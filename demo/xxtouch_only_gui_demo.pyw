@@ -1500,6 +1500,10 @@ class XXTouchOnlyDemo(tk.Tk):
                         status_text = str(raw or '').strip()
                         if not status_text:
                             continue
+                        if '|' in status_text:
+                            status_text = status_text.rsplit('|', 1)[-1].strip()
+                        if not status_text:
+                            continue
                         key = (router_id, machine)
                         if self._external_status_seen.get(key) == status_text:
                             continue
@@ -1507,7 +1511,15 @@ class XXTouchOnlyDemo(tk.Tk):
                         mode = 'error' if status_text.startswith('ERROR') else ('ok' if status_text in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status_text else 'running')
                         task = row.get('selected_script') or row.get('ui_selected_script') or 'Lua trực tiếp'
                         updates.append((row, task, status_text, mode))
-                    except Exception:
+                    except Exception as e:
+                        key = (router_id, machine, 'poll_error')
+                        err_text = str(e)
+                        if self._external_status_seen.get(key) != err_text:
+                            self._external_status_seen[key] = err_text
+                            try:
+                                updates.append((row, 'Lua trực tiếp', 'poll status lỗi: ' + err_text, 'error'))
+                            except Exception:
+                                pass
                         continue
             finally:
                 self.after(0, lambda: self._finish_external_status_poll(router, router_id, updates))
