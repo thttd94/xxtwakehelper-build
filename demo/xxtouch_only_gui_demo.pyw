@@ -1493,12 +1493,51 @@ class XXTouchOnlyDemo(tk.Tk):
         widget.see('1.0')
         widget.config(state='disabled')
 
+    def _sync_machine_status_from_log(self, router, line):
+        if not isinstance(router, dict):
+            return
+        text = str(line or '').strip()
+        if not text.startswith('[') or ']' not in text:
+            return
+        machine, rest = text[1:].split(']', 1)
+        machine = machine.strip()
+        rest = rest.strip()
+        if not machine or not rest:
+            return
+        if not any(str(row.get('machine', '')).strip() == machine for row in router.get('rows', [])):
+            return
+        upper_rest = rest.upper()
+        if ' LỖI:' in upper_rest or upper_rest.endswith(' LỖI') or ' ERROR:' in upper_rest:
+            mode = 'error'
+            status = rest
+        elif upper_rest.endswith(' OK') or ' OK ' in upper_rest or 'CHẠY XONG OK' in upper_rest or 'START OK' in upper_rest:
+            mode = 'ok'
+            status = rest
+        else:
+            return
+        action_name = rest
+        for sep in (' lỗi:', ' Lỗi:', ' LỖI:', ' CHẠY XONG OK', ' START OK', ' OK'):
+            idx = action_name.find(sep)
+            if idx > 0:
+                action_name = action_name[:idx].strip()
+                break
+        row = next((r for r in router.get('rows', []) if str(r.get('machine', '')).strip() == machine), None)
+        if row is not None:
+            row['note'] = status
+            row['updated'] = now_text()
+            if mode == 'ok':
+                row['network'] = 'OK'
+            elif mode == 'error':
+                row['network'] = 'Lỗi'
+        self._set_machine_status(router, {'machine': machine}, action_name, status, mode=mode)
+
     def _append_router_log(self, router, line):
         stamp = now_text()
         entry = f'[{stamp}] {line}'
         router_name = str(router.get('name', '?')) if isinstance(router, dict) else '?'
         router.setdefault('logs', []).append(entry)
         router['logs'] = router['logs'][-300:]
+        self._sync_machine_status_from_log(router, line)
         try:
             from datetime import datetime
             full_stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
