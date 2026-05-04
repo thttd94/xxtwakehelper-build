@@ -20,7 +20,9 @@ local repeat_count = 3
 local interval_ms = 60 * 60 * 1000
 
 local function status(text)
- sys.toast(tostring(text or ""), 0)
+ text = tostring(text or "")
+ if type(__oc_write_status) == "function" then pcall(__oc_write_status, text) end
+ sys.toast(text, 0)
  return true
 end
 

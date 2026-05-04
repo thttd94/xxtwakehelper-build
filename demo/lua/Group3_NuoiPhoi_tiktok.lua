@@ -66,6 +66,7 @@ function status(t)
  local text = "Ver " .. SCRIPT_VERSION .. " : " .. t
  local now = os.time()
  if text ~= __last_status or now - __last_status_at >= 1 then
+  if type(__oc_write_status) == "function" then pcall(__oc_write_status, text) end
   sys.toast(text, 0)
   __last_status = text
   __last_status_at = now

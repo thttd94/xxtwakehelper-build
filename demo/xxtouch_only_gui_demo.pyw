@@ -3048,9 +3048,8 @@ class XXTouchOnlyDemo(tk.Tk):
         safe_path = str(status_path).replace('\\', '/').replace('"', '\\"')
         return f'''
 local __oc_status_path = "{safe_path}"
-local __oc_old_toast = nil
 local __oc_last_status = ""
-local function __oc_write_status_raw(msg)
+function __oc_write_status_raw(msg)
     msg = tostring(msg or "")
     if msg ~= "" and msg ~= "STARTED" and not string.match(msg, "^ERROR") and msg ~= "FINISHED_OK" then
         __oc_last_status = msg
@@ -3076,24 +3075,8 @@ local function __oc_write_status_raw(msg)
     end
     pcall(print, "OC_STATUS:" .. msg)
 end
-local function __oc_write_status(msg)
+function __oc_write_status(msg)
     pcall(__oc_write_status_raw, msg)
-end
-local ok_sys, sys_mod = pcall(require, "sys")
-if ok_sys and sys_mod and type(sys_mod.toast) == "function" then
-    __oc_old_toast = sys_mod.toast
-    sys_mod.toast = function(msg, ...)
-        __oc_write_status(msg)
-        return __oc_old_toast(msg, ...)
-    end
-    package.loaded["sys"] = sys_mod
-    _G.sys = sys_mod
-elseif type(_G.sys) == "table" and type(_G.sys.toast) == "function" then
-    __oc_old_toast = _G.sys.toast
-    _G.sys.toast = function(msg, ...)
-        __oc_write_status(msg)
-        return __oc_old_toast(msg, ...)
-    end
 end
 __oc_write_status("STARTED")
 local __oc_ok, __oc_err = xpcall(function()
