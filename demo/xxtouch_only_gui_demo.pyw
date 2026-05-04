@@ -298,6 +298,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.inline_snippets = load_inline_snippets()
         self.router_devices_trees = {}
         self.router_logs_widgets = {}
+        self.router_mini_log_widgets = {}
         self.router_file_widgets = {}
         self.router_uid_trees = {}
         self.router_uid_status_labels = {}
@@ -447,6 +448,19 @@ class XXTouchOnlyDemo(tk.Tk):
 
         primary_row = ttk.Frame(box, style='Card.TFrame')
         primary_row.pack(fill='x', pady=(0, 8))
+        mini_log = tk.Text(primary_row, height=5, width=46, bg='#020617', fg='#e2e8f0', insertbackground='#e2e8f0', relief='solid', borderwidth=1, wrap='none', font=('Consolas', 8))
+        mini_log.pack(side='right', padx=(8, 0), fill='x')
+        for tag, color in [
+            ('mini0', '#22c55e'),
+            ('mini1', '#60a5fa'),
+            ('mini2', '#facc15'),
+            ('mini3', '#fb7185'),
+            ('mini4', '#c084fc'),
+        ]:
+            mini_log.tag_configure(tag, foreground=color)
+        mini_log.config(state='disabled')
+        self.router_mini_log_widgets[id(router)] = mini_log
+        self._refresh_router_mini_log(router)
         primary_specs = [
             ('STOP SCRIPT', lambda r=router: self._run_background(r, self._stop_scripts_for_router)),
             ('HOME', lambda r=router: self._run_background(r, self._run_home_for_router)),
@@ -1275,6 +1289,22 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_logs_widgets[id(router)] = text
         self._refresh_router_logs(router)
 
+    def _refresh_router_mini_log(self, router):
+        widget = self.router_mini_log_widgets.get(id(router))
+        if widget is None:
+            return
+        try:
+            widget.config(state='normal')
+            widget.delete('1.0', 'end')
+            lines = list(router.get('logs', []))[-5:]
+            colors = ['mini0', 'mini1', 'mini2', 'mini3', 'mini4']
+            for idx, line in enumerate(lines):
+                widget.insert('end', line + '\n', colors[idx % len(colors)])
+            widget.see('end')
+            widget.config(state='disabled')
+        except Exception:
+            pass
+
     def _open_log_file(self):
         try:
             LOG_PATH.touch(exist_ok=True)
@@ -1310,6 +1340,7 @@ class XXTouchOnlyDemo(tk.Tk):
             pass
         save_router_config(self.routers)
         self._refresh_router_logs(router)
+        self._refresh_router_mini_log(router)
 
     def _run_background(self, router, fn):
         def worker():
