@@ -1,6 +1,9 @@
 import base64
 import json
+import os
 import random
+import socket
+import sys
 import threading
 import time
 import tkinter as tk
@@ -306,6 +309,9 @@ class XXTouchOnlyDemo(tk.Tk):
         self._router_mini_log_refresh_pending = set()
         self._router_devices_refresh_pending = set()
         self._external_status_seen = {}
+        self._external_status_poll_running = set()
+        self._external_status_poll_cursor = {}
+        self._external_status_poll_last = {}
         self.router_file_widgets = {}
         self.router_uid_trees = {}
         self.router_uid_status_labels = {}
@@ -1439,47 +1445,73 @@ class XXTouchOnlyDemo(tk.Tk):
             return
         states_count = len(router.get('_machine_status', {}) or {})
         # 1000 rows update every second will freeze Tk. Keep near-realtime but avoid UI death.
-        interval = 2500 if states_count >= 800 else (1500 if states_count >= 300 else 1000)
+        interval = 5000 if states_count >= 800 else (3500 if states_count >= 300 else 2500)
         self._poll_external_lua_status(router)
         self._refresh_router_logs(router)
         self.after(interval, lambda r=router: self._refresh_router_status_tick(r))
 
     def _poll_external_lua_status(self, router):
-        rows = list(router.get('rows', []) or [])
-        if not rows:
+        router_id = id(router)
+        now = time.time()
+        min_gap = 8.0
+        if now - float(self._external_status_poll_last.get(router_id, 0) or 0) < min_gap:
             return
-        states_count = len(router.get('_machine_status', {}) or {})
-        limit = 40 if states_count < 300 else 20
-        for row in rows[:limit]:
-            ip = str(row.get('ip') or '').strip()
-            machine = str(row.get('machine', '?')).strip() or '?'
-            if not ip:
-                continue
+        if router_id in self._external_status_poll_running:
+            return
+        rows_all = list(router.get('rows', []) or [])
+        if not rows_all:
+            return
+        batch = 10
+        start = int(self._external_status_poll_cursor.get(router_id, 0) or 0) % max(1, len(rows_all))
+        rows = rows_all[start:start + batch]
+        if len(rows) < batch:
+            rows += rows_all[:batch - len(rows)]
+        self._external_status_poll_cursor[router_id] = (start + len(rows)) % max(1, len(rows_all))
+        self._external_status_poll_last[router_id] = now
+        self._external_status_poll_running.add(router_id)
+
+        def worker():
+            updates = []
             try:
-                client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=0.35, read_timeout=0.8)
-                paths = [
-                    f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt',
-                    '/var/mobile/Media/1ferver/lua/examples/oc_status.txt',
-                ]
-                raw = ''
-                for path in paths:
-                    raw = self._read_lua_status_text(client, path)
-                    if raw:
-                        break
-                status_text = str(raw or '').strip()
-                if not status_text:
-                    continue
-                key = (id(router), machine)
-                if self._external_status_seen.get(key) == status_text:
-                    continue
-                self._external_status_seen[key] = status_text
-                mode = 'error' if status_text.startswith('ERROR') else ('ok' if status_text in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status_text else 'running')
-                task = row.get('selected_script') or row.get('ui_selected_script') or 'Lua trực tiếp'
-                row['note'] = status_text
-                row['updated'] = now_text()
-                self._set_machine_status(router, row, task, status_text, mode=mode)
-            except Exception:
-                continue
+                for row in rows:
+                    ip = str(row.get('ip') or '').strip()
+                    machine = str(row.get('machine', '?')).strip() or '?'
+                    if not ip:
+                        continue
+                    try:
+                        client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=0.25, read_timeout=0.5)
+                        paths = [
+                            f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt',
+                            '/var/mobile/Media/1ferver/lua/examples/oc_status.txt',
+                        ]
+                        raw = ''
+                        for path in paths:
+                            raw = self._read_lua_status_text(client, path)
+                            if raw:
+                                break
+                        status_text = str(raw or '').strip()
+                        if not status_text:
+                            continue
+                        key = (router_id, machine)
+                        if self._external_status_seen.get(key) == status_text:
+                            continue
+                        self._external_status_seen[key] = status_text
+                        mode = 'error' if status_text.startswith('ERROR') else ('ok' if status_text in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status_text else 'running')
+                        task = row.get('selected_script') or row.get('ui_selected_script') or 'Lua trực tiếp'
+                        updates.append((row, task, status_text, mode))
+                    except Exception:
+                        continue
+            finally:
+                self.after(0, lambda: self._finish_external_status_poll(router, router_id, updates))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_external_status_poll(self, router, router_id, updates):
+        self._external_status_poll_running.discard(router_id)
+        for row, task, status_text, mode in updates:
+            row['note'] = status_text
+            row['updated'] = now_text()
+            self._set_machine_status(router, row, task, status_text, mode=mode)
 
     def _refresh_router_logs(self, router):
         widget = self.router_logs_widgets.get(id(router))
@@ -3544,6 +3576,25 @@ end
         self._run_parallel_rows(router, rows, task, 'INLINE', per_success=lambda row: f'[{row.get("machine", "?")}] chạy inline OK')
 
 
+def _single_instance_or_exit():
+    lock_path = str(Path(__file__).with_suffix('.lock'))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(('127.0.0.1', 46953))
+        sock.listen(1)
+    except OSError:
+        try:
+            messagebox.showinfo('Đang mở', 'PYW đang chạy rồi, không mở thêm cửa sổ thứ 2.')
+        except Exception:
+            pass
+        sys.exit(0)
+    try:
+        Path(lock_path).write_text(str(os.getpid()), encoding='utf-8')
+    except Exception:
+        pass
+    return sock
+
 if __name__ == '__main__':
+    _single_instance_socket = _single_instance_or_exit()
     app = XXTouchOnlyDemo()
     app.mainloop()
