@@ -2798,7 +2798,7 @@ class XXTouchOnlyDemo(tk.Tk):
     def _try_recycle_before_spawn(self, client):
         try:
             client.recycle()
-            time.sleep(0.35)
+            time.sleep(5.0)
             return
         except urllib.error.HTTPError as e:
             if getattr(e, 'code', None) not in (404, 405):
@@ -3078,9 +3078,9 @@ end
         machine = str(row.get('machine', '?'))
         client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=read_timeout)
         if stop_first:
-            self._append_router_log(router, f'[{machine}] {action_name}: STOP SCRIPT trước khi chạy')
+            self._append_router_log(router, f'[{machine}] {action_name}: STOP SCRIPT trước khi chạy, chờ 5s')
             client.recycle()
-            time.sleep(0.8)
+            time.sleep(5.0)
         status_path = f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt'
         run_command = self._lua_status_wrapper(command, status_path) if wait_lua_done else command
         client.spawn(run_command)
@@ -3138,9 +3138,9 @@ end
             if not ip:
                 raise XXTouchOpenAPIError('Thiếu IP')
             client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=8)
-            self._append_router_log(router, f'[{row.get("machine", "?")}] UI: STOP SCRIPT trước khi chạy')
+            self._append_router_log(router, f'[{row.get("machine", "?")}] UI: STOP SCRIPT trước khi chạy, chờ 5s')
             client.recycle()
-            time.sleep(0.8)
+            time.sleep(5.0)
             try:
                 select_resp = client._post_json('/select_script_file', {'filename': remote_path})
                 conf = client._post_json('/get_selected_script_file', {})
