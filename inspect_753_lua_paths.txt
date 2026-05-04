@@ -1,0 +1,48 @@
+PWD_PROBE
+DIR=/var/mobile/Media/1ferver/lua
+DIR=/var/mobile/Media/1ferver/lua/examples
+  Event1_s100.png
+  Event2_crop_s090.png
+  Event1_crop_s080.png
+  tapEvent.PNG
+  Group3_EventDD20p_tiktok_lite.lua
+  Event1_crop_s120.png
+  Event2.png
+  Event2_crop_s120.png
+  Event1_crop_s090.png
+  Event2_crop.png
+  Event2_crop_s080.png
+  Event1_s110.png
+  Event1.png
+  check_popup_Event2.png
+  check_popup_Event1.png
+  Event2_s090.png
+  Event2_s080.png
+  Event2_s120.png
+  Group3_NuoiPhoi_tiktok.lua
+  Event1_crop.png
+  Event2_s110.png
+  Group3_EventDD20p_tiktok.lua
+  Group3_EventVideo180_tiktok.lua
+  Group3_EventVideo180_tiktok_lite.lua
+  Event2_s100.png
+  floating_menu.lua
+  Group3_ClaimVideo.lua
+  Event1_s120.png
+  Stage6_tiktok.lua
+  Event1_crop_s100.png
+  Event1_s080.png
+  Event2_crop_s110.png
+  Event2_crop_s100.png
+  Event1_s090.png
+  Event1_crop_s110.png
+  Group3_NuoiPhoi_tiktok_lite.lua
+DIR=/var/mobile/Media/1ferver/lua/scripts
+  Event2.png
+  Event1.png
+  Group3_NuoiPhoi_tiktok.lua
+  floating_menu.lua
+DIR=/var/mobile/Media/1ferver/lua/lib
+  NO_LIST
+DIR=/var/mobile/Media/1ferver/lua/libs
+  NO_LIST

@@ -1,6 +1,5 @@
 import argparse
 import json
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 import sys
@@ -12,7 +11,10 @@ CONFIG = DEMO / 'xxtouch_router_config.json'
 sys.path.insert(0, str(DEMO))
 from xxtouch_openapi_client import XXTouchOpenAPIClient
 
-REMOTE_DIR = '/var/mobile/Media/1ferver/lua/examples'
+REMOTE_DIRS = [
+    '/var/mobile/Media/1ferver/lua/examples',
+    '/var/mobile/Media/1ferver/lua/scripts',
+]
 FILES = sorted(LUA_DIR.glob('*.lua'))
 
 def load_rows(machines):
@@ -38,10 +40,10 @@ def push_one(machine, ip):
     client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=0.8, read_timeout=8)
     pushed = 0
     for p in FILES:
-        remote = f'{REMOTE_DIR}/{p.name}'
         data = p.read_bytes()
-        client.write_file(remote, data)
-        pushed += 1
+        for remote_dir in REMOTE_DIRS:
+            client.write_file(f'{remote_dir}/{p.name}', data)
+            pushed += 1
     return machine, ip, pushed, 'OK'
 
 def main():
@@ -51,7 +53,7 @@ def main():
     args = ap.parse_args()
     machines = [x.strip() for x in args.machines.split(',') if x.strip()]
     rows = load_rows(machines)
-    print(f'PUSH {len(FILES)} lua files -> {len(rows)} clients')
+    print(f'PUSH {len(FILES)} lua files -> {len(REMOTE_DIRS)} dirs -> {len(rows)} clients')
     ok = fail = 0
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as ex:
         futs = [ex.submit(push_one, m, ip) for m, ip in rows]
@@ -59,7 +61,7 @@ def main():
             try:
                 m, ip, n, status = fut.result()
                 ok += 1
-                print(f'[{m}] {ip} OK {n} files')
+                print(f'[{m}] {ip} OK {n} writes')
             except Exception as e:
                 fail += 1
                 print(f'FAIL {e}')
