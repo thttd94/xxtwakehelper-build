@@ -299,6 +299,12 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_devices_trees = {}
         self.router_logs_widgets = {}
         self.router_mini_log_widgets = {}
+        self.router_status_widgets = {}
+        self.router_status_sort = {}
+        self._router_status_refresh_pending = set()
+        self._router_log_refresh_pending = set()
+        self._router_mini_log_refresh_pending = set()
+        self._router_devices_refresh_pending = set()
         self.router_file_widgets = {}
         self.router_uid_trees = {}
         self.router_uid_status_labels = {}
@@ -400,15 +406,13 @@ class XXTouchOnlyDemo(tk.Tk):
         router_notebook = ttk.Notebook(parent, style='HeadTab.TNotebook')
         router_notebook.pack(fill='both', expand=True)
         jobs_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
-        devices_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
         logs_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
         uid_tab = ttk.Frame(router_notebook, style='Card.TFrame', padding=12)
         router_notebook.add(jobs_tab, text='XXTouch Jobs')
-        router_notebook.add(devices_tab, text='Devices Info')
+        # Devices Info disabled: too heavy for 1000 clients.
         router_notebook.add(logs_tab, text='Logs')
         router_notebook.add(uid_tab, text='Lấy UID')
         self._jobs_tab(jobs_tab, router)
-        self._devices_tab(devices_tab, router)
         self._logs_tab(logs_tab, router)
         self._uid_tab(uid_tab, router)
 
@@ -629,13 +633,12 @@ class XXTouchOnlyDemo(tk.Tk):
             self._append_router_log(router, f'Không thấy file lua: {script_path.name}')
             return
         command = script_path.read_text(encoding='utf-8')
-        if action_key == 'event_dd_20p':
-            self._run_spawn_batched_for_router(router, command, script_path.name, batch_size=10, batch_delay=10, stop_first=True, read_timeout=12)
-            return
         if action_key == 'ui':
             self._run_floating_ui_for_router(router, script_path)
             return
-        self._run_spawn_command_for_router(router, command, script_path.name, stop_first=True, read_timeout=12)
+        # Với các script Group3/NuoiPhoi: spawn thành công chưa gọi là OK.
+        # Phải đọc status Lua và chỉ OK khi script chạy xong thật.
+        self._run_spawn_command_for_router(router, command, script_path.name, stop_first=True, read_timeout=12, wait_lua_done=True)
 
     def _parse_mmss(self, value):
         raw = str(value or '').strip()
@@ -1085,7 +1088,7 @@ class XXTouchOnlyDemo(tk.Tk):
 
         success = 0
         failed = 0
-        max_workers = min(32, max(1, len(rows)))
+        max_workers = min(50, max(1, len(rows)))
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             future_map = {pool.submit(task, row): row for row in rows}
             for future in as_completed(future_map):
@@ -1131,6 +1134,8 @@ class XXTouchOnlyDemo(tk.Tk):
         messagebox.showinfo('Xuất UID', f'Đã xuất kết quả:\n{path}')
 
     def _refresh_router_devices(self, router):
+        # Disabled: heavy table freezes GUI with hundreds/thousands of clients.
+        return
         tree = self.router_devices_trees.get(id(router))
         if tree is None:
             return
@@ -1274,22 +1279,40 @@ class XXTouchOnlyDemo(tk.Tk):
         card.pack(fill='both', expand=True)
         head = ttk.Frame(card, style='Card.TFrame')
         head.pack(fill='x', pady=(0, 8))
-        ttk.Label(head, text='RUN LOG', style='Title.TLabel').pack(side='left')
+        ttk.Label(head, text='STATUS THEO MÁY', style='Title.TLabel').pack(side='left')
         ttk.Label(head, text=f'File: {LOG_PATH.name}', style='Sub.TLabel').pack(side='left', padx=(12, 0))
         ttk.Button(head, text='Mở file log', command=lambda: self._open_log_file()).pack(side='right')
         wrap = ttk.Frame(card, style='Card.TFrame')
         wrap.pack(fill='both', expand=True)
-        text = tk.Text(wrap, height=26, bg='#0f172a', fg='#e2e8f0', insertbackground='#e2e8f0', relief='solid', borderwidth=1, wrap='none')
-        vsb = ttk.Scrollbar(wrap, orient='vertical', command=text.yview)
-        hsb = ttk.Scrollbar(wrap, orient='horizontal', command=text.xview)
-        text.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-        text.grid(row=0, column=0, sticky='nsew')
+        columns = ('time', 'machine', 'task', 'status', 'timer')
+        tree = ttk.Treeview(wrap, columns=columns, show='headings', height=26)
+        headings = {
+            'time': ('Thời gian', 115),
+            'machine': ('Số máy', 80),
+            'task': ('Tác vụ đang chạy', 300),
+            'status': ('Status', 360),
+            'timer': ('Đếm giờ', 150),
+        }
+        for col, (title, width) in headings.items():
+            tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
+            tree.column(col, width=width, anchor='w', stretch=(col in ('task', 'status')))
+        tree.tag_configure('running', foreground='#facc15')
+        tree.tag_configure('ok', foreground='#22c55e')
+        tree.tag_configure('error', foreground='#fb7185')
+        tree.tag_configure('wait', foreground='#60a5fa')
+        tree.tag_configure('idle', foreground='#94a3b8')
+        vsb = ttk.Scrollbar(wrap, orient='vertical', command=tree.yview)
+        hsb = ttk.Scrollbar(wrap, orient='horizontal', command=tree.xview)
+        tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        tree.grid(row=0, column=0, sticky='nsew')
         vsb.grid(row=0, column=1, sticky='ns')
         hsb.grid(row=1, column=0, sticky='ew')
         wrap.rowconfigure(0, weight=1)
         wrap.columnconfigure(0, weight=1)
-        self.router_logs_widgets[id(router)] = text
+        self.router_logs_widgets[id(router)] = tree
+        self.router_status_widgets[id(router)] = tree
         self._refresh_router_logs(router)
+        self._refresh_router_status_tick(router)
 
     def _refresh_router_mini_log(self, router):
         widget = self.router_mini_log_widgets.get(id(router))
@@ -1315,9 +1338,154 @@ class XXTouchOnlyDemo(tk.Tk):
         except Exception as e:
             messagebox.showerror('Mở file log', str(e))
 
+    def _machine_sort_key(self, value):
+        text = str(value or '').strip()
+        try:
+            return (0, int(text))
+        except Exception:
+            return (1, text)
+
+    def _format_elapsed(self, seconds):
+        try:
+            seconds = max(0, int(seconds))
+        except Exception:
+            seconds = 0
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return f'{h:02d}:{m:02d}:{s:02d}' if h else f'{m:02d}:{s:02d}'
+
+    def _sort_router_status_column(self, router, column):
+        rid = id(router)
+        current = self.router_status_sort.get(rid, {'column': 'machine', 'reverse': False})
+        reverse = not bool(current.get('reverse')) if current.get('column') == column else False
+        self.router_status_sort[rid] = {'column': column, 'reverse': reverse}
+        self._refresh_router_logs(router)
+
+    def _status_sort_value(self, st, column):
+        if column == 'machine':
+            return self._machine_sort_key(st.get('machine', ''))
+        if column == 'time':
+            return str(st.get('time', ''))
+        if column == 'task':
+            return str(st.get('task', '')).lower()
+        if column == 'status':
+            return str(st.get('status', '')).lower()
+        if column == 'timer':
+            try:
+                return float(st.get('_timer_seconds', 0))
+            except Exception:
+                return 0
+        return str(st.get(column, '')).lower()
+
+    def _schedule_router_status_refresh(self, router, delay_ms=250):
+        rid = id(router)
+        if rid in self._router_status_refresh_pending:
+            return
+        self._router_status_refresh_pending.add(rid)
+        def flush():
+            self._router_status_refresh_pending.discard(rid)
+            self._refresh_router_logs(router)
+        self.after(delay_ms, flush)
+
+    def _schedule_router_log_refresh(self, router, delay_ms=350):
+        rid = id(router)
+        if rid in self._router_log_refresh_pending:
+            return
+        self._router_log_refresh_pending.add(rid)
+        def flush():
+            self._router_log_refresh_pending.discard(rid)
+            self._refresh_router_logs(router)
+        self.after(delay_ms, flush)
+
+    def _schedule_router_mini_log_refresh(self, router, delay_ms=350):
+        rid = id(router)
+        if rid in self._router_mini_log_refresh_pending:
+            return
+        self._router_mini_log_refresh_pending.add(rid)
+        def flush():
+            self._router_mini_log_refresh_pending.discard(rid)
+            self._refresh_router_mini_log(router)
+        self.after(delay_ms, flush)
+
+    def _schedule_router_devices_refresh(self, router, delay_ms=None):
+        # Devices Info tab is disabled for large fleets; never refresh the heavy device table.
+        return
+
+    def _set_machine_status(self, router, row, action_name, status, mode='running', countdown=None, started_at=None):
+        if not isinstance(router, dict) or row is None:
+            return
+        machine = str(row.get('machine', '?')).strip() or '?'
+        states = router.setdefault('_machine_status', {})
+        prev = states.get(machine, {})
+        now = time.time()
+        if started_at is None:
+            started_at = prev.get('started_at') or now
+        states[machine] = {
+            'time': now_text(),
+            'machine': machine,
+            'task': str(action_name or prev.get('task') or ''),
+            'status': str(status or ''),
+            'mode': mode,
+            'countdown': countdown,
+            'started_at': started_at,
+            'updated_at': now,
+        }
+        self._schedule_router_status_refresh(router)
+
+    def _refresh_router_status_tick(self, router):
+        if not isinstance(router, dict):
+            return
+        if self.router_status_widgets.get(id(router)) is None:
+            return
+        states_count = len(router.get('_machine_status', {}) or {})
+        # 1000 rows update every second will freeze Tk. Keep near-realtime but avoid UI death.
+        interval = 2500 if states_count >= 800 else (1500 if states_count >= 300 else 1000)
+        self._refresh_router_logs(router)
+        self.after(interval, lambda r=router: self._refresh_router_status_tick(r))
+
     def _refresh_router_logs(self, router):
         widget = self.router_logs_widgets.get(id(router))
         if widget is None:
+            return
+        if hasattr(widget, 'get_children'):
+            states = router.setdefault('_machine_status', {})
+            existing = set(widget.get_children(''))
+            now = time.time()
+            prepared = []
+            for machine, st in states.items():
+                countdown = st.get('countdown')
+                if countdown is not None and st.get('mode') == 'wait':
+                    remain = max(0, int(round(float(countdown) - (now - float(st.get('started_at') or now)))))
+                    timer = f'-{self._format_elapsed(remain)}'
+                    timer_seconds = -remain
+                    if remain <= 0:
+                        st['countdown'] = None
+                else:
+                    elapsed = max(0, now - float(st.get('started_at') or now))
+                    timer = '+' + self._format_elapsed(elapsed)
+                    timer_seconds = elapsed
+                st['_timer_text'] = timer
+                st['_timer_seconds'] = timer_seconds
+                prepared.append((machine, st))
+            sort_state = self.router_status_sort.get(id(router), {'column': 'machine', 'reverse': False})
+            sort_col = sort_state.get('column') or 'machine'
+            reverse = bool(sort_state.get('reverse'))
+            prepared.sort(key=lambda item: self._status_sort_value(item[1], sort_col), reverse=reverse)
+            for machine, st in prepared:
+                timer = st.get('_timer_text', '')
+                values = (st.get('time', ''), machine, st.get('task', ''), st.get('status', ''), timer)
+                tag = st.get('mode') or 'idle'
+                if machine in existing:
+                    widget.item(machine, values=values, tags=(tag,))
+                    existing.remove(machine)
+                else:
+                    widget.insert('', 'end', iid=machine, values=values, tags=(tag,))
+            for iid in existing:
+                widget.delete(iid)
+            ordered = [machine for machine, _st in prepared]
+            for idx, iid in enumerate(ordered):
+                if widget.exists(iid):
+                    widget.move(iid, '', idx)
             return
         widget.config(state='normal')
         widget.delete('1.0', 'end')
@@ -1340,9 +1508,10 @@ class XXTouchOnlyDemo(tk.Tk):
                 f.write(f'{full_stamp} [{router_name}] {line}\n')
         except Exception:
             pass
-        save_router_config(self.routers)
-        self._refresh_router_logs(router)
-        self._refresh_router_mini_log(router)
+        # Runtime logs/status are high-frequency when running hundreds of devices.
+        # Do not save router_config on every log line; it freezes Tkinter and hammers disk.
+        self._schedule_router_log_refresh(router)
+        self._schedule_router_mini_log_refresh(router)
 
     def _run_background(self, router, fn):
         def worker():
@@ -2650,41 +2819,26 @@ class XXTouchOnlyDemo(tk.Tk):
         self._append_router_log(router, f'{action_name}: bắt đầu chạy đồng thời {len(rows)} máy')
 
         def delayed_task(row, delay_seconds):
+            machine = str(row.get('machine', '?'))
+            task_started = time.time()
             if delay_seconds > 0:
-                machine = str(row.get('machine', '?'))
                 row['network'] = 'Chờ Random'
                 row['note'] = f'Random Start còn {int(delay_seconds)}s'
                 row['updated'] = now_text()
-                self.after(0, lambda: self._refresh_router_devices(router))
+                self._set_machine_status(router, row, action_name, row['note'], mode='wait', countdown=int(delay_seconds), started_at=task_started)
+                self._schedule_router_devices_refresh(router)
                 self.after(0, lambda m=machine, d=int(delay_seconds): self._append_router_log(router, f'[{m}] {action_name}: Random Start chờ {d}s'))
-                remaining = int(delay_seconds)
-                while remaining > 0:
-                    step = 1 if remaining <= 10 else min(5, remaining)
-                    time.sleep(step)
-                    remaining -= step
-                    row['network'] = 'Chờ Random'
-                    row['note'] = f'Random Start còn {max(0, remaining)}s'
-                    row['updated'] = now_text()
-                    self.after(0, lambda: self._refresh_router_devices(router))
-                row['note'] = f'{action_name}: đang chạy'
-                row['updated'] = now_text()
-                self.after(0, lambda: self._refresh_router_devices(router))
+                time.sleep(max(0, float(delay_seconds)))
+            row['note'] = f'{action_name}: đang chạy'
+            row['updated'] = now_text()
+            self._set_machine_status(router, row, action_name, 'Đang chạy', mode='running', started_at=time.time())
+            self._schedule_router_devices_refresh(router)
             return task(row)
 
         def build_random_start_delays(total, max_delay):
-            if total <= 1:
-                return [random.randint(0, max(0, max_delay))]
+            # Random Start phải chạy tất cả máy cùng lúc; mỗi máy tự chờ random riêng, không rải theo thứ tự.
             span = max(0, int(max_delay))
-            slot = span / max(1, total - 1)
-            jitter = max(1, int(slot * 0.45)) if slot >= 2 else 1
-            delays = []
-            for idx in range(total):
-                base = idx * slot
-                delay = int(round(base + random.randint(-jitter, jitter)))
-                delay = max(0, min(span, delay))
-                delays.append(delay)
-            random.shuffle(delays)
-            return delays
+            return [random.randint(0, span) for _ in range(max(0, total))]
 
         delays = build_random_start_delays(len(rows), random_seconds) if random_enabled else [0] * len(rows)
 
@@ -2693,7 +2847,7 @@ class XXTouchOnlyDemo(tk.Tk):
             failed = 0
             failed_rows = []
             failed_by_error = {}
-            max_workers = min(32, max(1, len(rows)))
+            max_workers = min(1000, max(1, len(rows)))
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
                 future_map = {pool.submit(delayed_task, row, delay): row for row, delay in zip(rows, delays)}
                 for future in as_completed(future_map):
@@ -2701,6 +2855,10 @@ class XXTouchOnlyDemo(tk.Tk):
                     try:
                         future.result()
                         success += 1
+                        row['updated'] = now_text()
+                        row['network'] = 'OK'
+                        row['note'] = f'{action_name}: OK'
+                        self._set_machine_status(router, row, action_name, 'OK', mode='ok')
                         if per_success:
                             self.after(0, lambda r=row: self._append_router_log(router, per_success(r)))
                     except Exception as e:
@@ -2711,6 +2869,7 @@ class XXTouchOnlyDemo(tk.Tk):
                         machine = str(row.get('machine', '?'))
                         failed_rows.append(machine)
                         failed_by_error.setdefault(err, []).append(machine)
+                        self._set_machine_status(router, row, action_name, f'Lỗi: {err}', mode='error')
                         self.after(0, lambda r=row, err=err: self._append_router_log(router, f'[{r.get("machine", "?")}] {action_name} lỗi: {err}'))
             router['last_failed_action'] = None
             if failed_rows:
@@ -2719,7 +2878,7 @@ class XXTouchOnlyDemo(tk.Tk):
                     'machines': failed_rows,
                 }
             save_router_config(self.routers)
-            self.after(0, lambda: self._refresh_router_devices(router))
+            self._schedule_router_devices_refresh(router)
             self.after(0, lambda: self._append_router_log(router, f'{action_name}: thành công {success}, lỗi {failed}'))
             if failed_by_error:
                 for err, machines in failed_by_error.items():
@@ -2847,20 +3006,124 @@ class XXTouchOnlyDemo(tk.Tk):
     def _run_quit_apps_for_router(self, router):
         self._run_spawn_command_for_router(router, self._quit_apps_command(), 'ĐÓNG ỨNG DỤNG')
 
-    def _spawn_task_for_row(self, router, row, command, action_name, stop_first=True, read_timeout=6):
+    def _lua_status_wrapper(self, command, status_path):
+        safe_path = str(status_path).replace('\\', '/').replace('"', '\\"')
+        return f'''
+local __oc_status_path = "{safe_path}"
+local __oc_old_toast = nil
+local function __oc_write_status(msg)
+    msg = tostring(msg or "")
+    local line = tostring(os.time()) .. "|" .. msg
+    local ok_file, file = pcall(require, "file")
+    if ok_file and file and file.writes then
+        pcall(file.writes, __oc_status_path, line)
+    else
+        local f = io.open(__oc_status_path, "w")
+        if f then f:write(line) f:close() end
+    end
+    print("OC_STATUS:" .. msg)
+end
+local ok_sys, sys_mod = pcall(require, "sys")
+if ok_sys and sys_mod then
+    __oc_old_toast = sys_mod.toast
+    sys_mod.toast = function(msg, ...)
+        __oc_write_status(msg)
+        if __oc_old_toast then return __oc_old_toast(msg, ...) end
+    end
+    package.loaded["sys"] = sys_mod
+end
+__oc_write_status("STARTED")
+local __oc_ok, __oc_err = xpcall(function()
+{command}
+end, debug.traceback)
+if __oc_ok then
+    __oc_write_status("FINISHED_OK")
+else
+    __oc_write_status("ERROR: " .. tostring(__oc_err))
+    error(__oc_err)
+end
+'''.lstrip()
+
+    def _client_is_running(self, client):
+        try:
+            resp = client._post_json('/is_running', {})
+            if isinstance(resp, dict):
+                code = resp.get('code')
+                msg = str(resp.get('message') or '')
+                data = resp.get('data')
+                if code == 3 or 'running another script' in msg.lower():
+                    return True
+                if isinstance(data, bool):
+                    return data
+                if isinstance(data, dict) and 'running' in data:
+                    return bool(data.get('running'))
+            return False
+        except Exception:
+            return False
+
+    def _read_lua_status_text(self, client, status_path):
+        try:
+            raw = client.download_text_file(status_path)
+        except Exception:
+            return ''
+        raw = str(raw or '').strip()
+        if '|' in raw:
+            return raw.split('|', 1)[1].strip()
+        return raw
+
+    def _spawn_task_for_row(self, router, row, command, action_name, stop_first=True, read_timeout=6, wait_lua_done=False):
         ip = str(row.get('ip') or '').strip()
         if not ip:
             raise XXTouchOpenAPIError('Thiếu IP')
+        machine = str(row.get('machine', '?'))
         client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=read_timeout)
         if stop_first:
-            self._append_router_log(router, f'[{row.get("machine", "?")}] {action_name}: STOP SCRIPT trước khi chạy')
+            self._append_router_log(router, f'[{machine}] {action_name}: STOP SCRIPT trước khi chạy')
             client.recycle()
             time.sleep(0.8)
-        client.spawn(command)
+        status_path = f'/var/mobile/Media/1ferver/lua/examples/oc_status_{machine}.txt'
+        run_command = self._lua_status_wrapper(command, status_path) if wait_lua_done else command
+        client.spawn(run_command)
         row['network'] = 'Online'
         row['xxtouch'] = 'Connected'
         row['updated'] = now_text()
-        return row
+        if not wait_lua_done:
+            return row
+
+        self._set_machine_status(router, row, action_name, 'Đã start Lua, đang chờ status...', mode='running', started_at=time.time())
+        last_status = ''
+        last_log_at = 0.0
+        quiet_after_spawn = time.time() + 1.5
+        deadline = time.time() + 4 * 60 * 60
+        while time.time() < deadline:
+            status_text = self._read_lua_status_text(client, status_path)
+            if status_text and status_text != last_status:
+                last_status = status_text
+                row['note'] = status_text
+                row['updated'] = now_text()
+                mode = 'error' if status_text.startswith('ERROR:') else 'running'
+                self._set_machine_status(router, row, action_name, status_text, mode=mode)
+                now = time.time()
+                if now - last_log_at >= 1.0:
+                    last_log_at = now
+                    self.after(0, lambda m=machine, st=status_text: self._append_router_log(router, f'[{m}] {st}'))
+            if status_text == 'FINISHED_OK':
+                row['note'] = f'{action_name}: chạy xong'
+                row['updated'] = now_text()
+                return row
+            if status_text.startswith('ERROR:'):
+                raise XXTouchOpenAPIError(status_text)
+            if time.time() > quiet_after_spawn and not self._client_is_running(client):
+                final_status = self._read_lua_status_text(client, status_path) or last_status
+                if final_status == 'FINISHED_OK':
+                    row['note'] = f'{action_name}: chạy xong'
+                    row['updated'] = now_text()
+                    return row
+                if final_status.startswith('ERROR:'):
+                    raise XXTouchOpenAPIError(final_status)
+                raise XXTouchOpenAPIError(f'Lua đã dừng nhưng chưa báo FINISHED_OK, status cuối: {final_status or "<trống>"}')
+            time.sleep(2.5)
+        raise XXTouchOpenAPIError('Quá thời gian chờ Lua chạy xong')
 
     def _run_floating_ui_for_router(self, router, script_path):
         rows = self._selected_rows(router)
@@ -2948,13 +3211,14 @@ class XXTouchOnlyDemo(tk.Tk):
 
         self._run_parallel_rows(router, rows, task, 'SELECT SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] SELECT SCRIPT OK ({safe_name}) | VOL UP/DOWN=1')
 
-    def _run_spawn_command_for_router(self, router, command, action_name, stop_first=True, read_timeout=6):
+    def _run_spawn_command_for_router(self, router, command, action_name, stop_first=True, read_timeout=6, wait_lua_done=False):
         rows = self._selected_rows(router)
 
         def task(row):
-            return self._spawn_task_for_row(router, row, command, action_name, stop_first=stop_first, read_timeout=read_timeout)
+            return self._spawn_task_for_row(router, row, command, action_name, stop_first=stop_first, read_timeout=read_timeout, wait_lua_done=wait_lua_done)
 
-        self._run_parallel_rows(router, rows, task, action_name, per_success=lambda row: f'[{row.get("machine", "?")}] {action_name} OK')
+        ok_label = 'CHẠY XONG OK' if wait_lua_done else 'START OK'
+        self._run_parallel_rows(router, rows, task, action_name, per_success=lambda row: f'[{row.get("machine", "?")}] {action_name} {ok_label}')
 
     def _run_spawn_batched_for_router(self, router, command, action_name, batch_size=10, batch_delay=10, stop_first=True, read_timeout=6):
         rows = self._selected_rows(router)
@@ -2991,7 +3255,7 @@ class XXTouchOnlyDemo(tk.Tk):
                     self.after(0, lambda idx=batch_index, wait=batch_delay: self._append_router_log(router, f'{action_name}: đợt {idx} xong, chờ {wait}s sang đợt tiếp'))
                     time.sleep(batch_delay)
             save_router_config(self.routers)
-            self.after(0, lambda: self._refresh_router_devices(router))
+            self._schedule_router_devices_refresh(router)
             self.after(0, lambda: self._append_router_log(router, f'{action_name}: thành công {success}, lỗi {failed}'))
 
         threading.Thread(target=worker, daemon=True).start()
@@ -3151,7 +3415,7 @@ class XXTouchOnlyDemo(tk.Tk):
                     self.txt_pool = remain
                     save_txt_pool(self.txt_pool)
                     self.after(0, refresh_tree)
-                self.after(0, lambda: self._refresh_router_devices(router))
+                self._schedule_router_devices_refresh(router)
                 self.after(0, lambda: self._append_router_log(router, f'SEND TXT: đã gửi {success} dòng, lỗi {failed}, còn lại {len(self.txt_pool)} dòng'))
             threading.Thread(target=worker, daemon=True).start()
 
