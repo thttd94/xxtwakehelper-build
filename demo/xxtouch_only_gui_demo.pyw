@@ -335,6 +335,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self._style()
         self._build()
         self._restore_runtime_prefs()
+        self.after(1500, self._external_status_poll_loop)
 
     def _style(self):
         style = ttk.Style(self)
@@ -1450,18 +1451,25 @@ class XXTouchOnlyDemo(tk.Tk):
         self._refresh_router_logs(router)
         self.after(interval, lambda r=router: self._refresh_router_status_tick(r))
 
-    def _poll_external_lua_status(self, router):
+    def _external_status_poll_loop(self):
+        try:
+            for router in list(self.routers or []):
+                self._poll_external_lua_status(router, force=True)
+        finally:
+            self.after(3000, self._external_status_poll_loop)
+
+    def _poll_external_lua_status(self, router, force=False):
         router_id = id(router)
         now = time.time()
         min_gap = 8.0
-        if now - float(self._external_status_poll_last.get(router_id, 0) or 0) < min_gap:
+        if (not force) and now - float(self._external_status_poll_last.get(router_id, 0) or 0) < min_gap:
             return
         if router_id in self._external_status_poll_running:
             return
         rows_all = list(router.get('rows', []) or [])
         if not rows_all:
             return
-        batch = 10
+        batch = 25 if force else 10
         start = int(self._external_status_poll_cursor.get(router_id, 0) or 0) % max(1, len(rows_all))
         rows = rows_all[start:start + batch]
         if len(rows) < batch:
