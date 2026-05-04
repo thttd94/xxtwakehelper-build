@@ -3050,7 +3050,7 @@ class XXTouchOnlyDemo(tk.Tk):
 local __oc_status_path = "{safe_path}"
 local __oc_old_toast = nil
 local __oc_last_status = ""
-local function __oc_write_status(msg)
+local function __oc_write_status_raw(msg)
     msg = tostring(msg or "")
     if msg ~= "" and msg ~= "STARTED" and not string.match(msg, "^ERROR") and msg ~= "FINISHED_OK" then
         __oc_last_status = msg
@@ -3060,24 +3060,31 @@ local function __oc_write_status(msg)
     local ok_file, file = pcall(require, "file")
     if ok_file and file then
         if type(file.writes) == "function" then
-            wrote = pcall(file.writes, __oc_status_path, line) or wrote
+            local ok = pcall(file.writes, __oc_status_path, line)
+            wrote = ok or wrote
         end
         if (not wrote) and type(file.write) == "function" then
-            wrote = pcall(file.write, __oc_status_path, line) or wrote
+            local ok = pcall(file.write, __oc_status_path, line)
+            wrote = ok or wrote
         end
     end
     if not wrote then
-        local f = io.open(__oc_status_path, "w")
-        if f then f:write(line) f:close() wrote = true end
+        pcall(function()
+            local f = io.open(__oc_status_path, "w")
+            if f then f:write(line) f:close() end
+        end)
     end
-    print("OC_STATUS:" .. msg)
+    pcall(print, "OC_STATUS:" .. msg)
+end
+local function __oc_write_status(msg)
+    pcall(__oc_write_status_raw, msg)
 end
 local ok_sys, sys_mod = pcall(require, "sys")
-if ok_sys and sys_mod then
+if ok_sys and sys_mod and type(sys_mod.toast) == "function" then
     __oc_old_toast = sys_mod.toast
     sys_mod.toast = function(msg, ...)
         __oc_write_status(msg)
-        if __oc_old_toast then return __oc_old_toast(msg, ...) end
+        return __oc_old_toast(msg, ...)
     end
     package.loaded["sys"] = sys_mod
     _G.sys = sys_mod
