@@ -1292,7 +1292,7 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap = ttk.Frame(card, style='Card.TFrame')
         wrap.pack(fill='both', expand=True)
         columns = ('time', 'machine', 'task', 'status', 'state')
-        tree = ttk.Treeview(wrap, columns=columns, show='headings', height=26)
+        tree = ttk.Treeview(wrap, columns=columns, show='headings', height=12)
         headings = {
             'time': ('Thời gian', 115),
             'machine': ('Số máy', 80),
@@ -1316,9 +1316,18 @@ class XXTouchOnlyDemo(tk.Tk):
         hsb.grid(row=1, column=0, sticky='ew')
         wrap.rowconfigure(0, weight=1)
         wrap.columnconfigure(0, weight=1)
+
+        result_head = ttk.Frame(card, style='Card.TFrame')
+        result_head.pack(fill='x', pady=(10, 4))
+        ttk.Label(result_head, text='LOG KẾT QUẢ TÁC VỤ PYW', style='Title.TLabel').pack(side='left')
+        result_box = tk.Text(card, height=11, bg='#020617', fg='#e5e7eb', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        result_box.pack(fill='both', expand=True)
+        result_box.config(state='disabled')
+        self.router_mini_log_widgets[id(router)] = result_box
         self.router_logs_widgets[id(router)] = tree
         self.router_status_widgets[id(router)] = tree
         self._refresh_router_logs(router)
+        self._refresh_router_mini_log(router)
         self._refresh_router_status_tick(router)
 
     def _refresh_router_mini_log(self, router):
@@ -1581,11 +1590,6 @@ class XXTouchOnlyDemo(tk.Tk):
             row['note'] = status_text
             row['updated'] = now_text()
             self._set_machine_status(router, row, task, status_text, mode=mode)
-            try:
-                machine = row.get('machine', '?')
-                self._append_router_log(router, f'[{machine}] {task}: {status_text}')
-            except Exception:
-                pass
         if updates:
             self._refresh_router_logs(router)
 
