@@ -1347,13 +1347,13 @@ class XXTouchOnlyDemo(tk.Tk):
         headings = {
             'time': ('Thời gian', 0.10),
             'machine': ('Số máy', 0.10),
-            'task': ('Tác vụ', 0.30),
+            'task': ('Tác vụ', 0.25),
             'status': ('Tiến trình', 0.45),
-            'state': ('Trạng thái', 0.05),
+            'state': ('Trạng thái', 0.10),
         }
         for col, (title, ratio) in headings.items():
             tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
-            tree.column(col, width=1, minwidth=1, anchor='w', stretch=False)
+            tree.column(col, width=1, minwidth=1, anchor=('center' if col == 'machine' else 'w'), stretch=False)
         tree.tag_configure('running', foreground='#facc15')
         tree.tag_configure('ok', foreground='#22c55e')
         tree.tag_configure('error', foreground='#fb7185')
@@ -1367,7 +1367,7 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap.columnconfigure(0, weight=1)
         def resize_status_columns(_e=None, t=tree):
             width = max(100, t.winfo_width() - 24)
-            ratios = {'time': 0.10, 'machine': 0.10, 'task': 0.30, 'status': 0.45, 'state': 0.05}
+            ratios = {'time': 0.10, 'machine': 0.10, 'task': 0.25, 'status': 0.45, 'state': 0.10}
             for c, ratio in ratios.items():
                 w = max(24, int(width * ratio))
                 t.column(c, width=w, minwidth=w, stretch=False)
