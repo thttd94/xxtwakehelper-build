@@ -1334,8 +1334,8 @@ class XXTouchOnlyDemo(tk.Tk):
             'time': ('Thời gian', 115),
             'machine': ('Số máy', 80),
             'task': ('Tác vụ', 150),
-            'status': ('Bước / Nội dung', 510),
-            'state': ('Kết quả', 320),
+            'status': ('Tiến trình', 383),
+            'state': ('Trạng thái', 447),
         }
         for col, (title, width) in headings.items():
             tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
