@@ -1344,30 +1344,35 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap.pack(fill='both', expand=True)
         columns = ('time', 'machine', 'task', 'status', 'state')
         tree = ttk.Treeview(wrap, columns=columns, show='headings', height=20)
-        total_width = 980
         headings = {
-            'time': ('Thời gian', int(total_width * 0.20)),
-            'machine': ('Số máy', int(total_width * 0.05)),
-            'task': ('Tác vụ', int(total_width * 0.30)),
-            'status': ('Tiến trình', int(total_width * 0.40)),
-            'state': ('Trạng thái', int(total_width * 0.05)),
+            'time': ('Thời gian', 0.20),
+            'machine': ('Số máy', 0.05),
+            'task': ('Tác vụ', 0.30),
+            'status': ('Tiến trình', 0.40),
+            'state': ('Trạng thái', 0.05),
         }
-        for col, (title, width) in headings.items():
+        for col, (title, ratio) in headings.items():
             tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
-            tree.column(col, width=width, minwidth=width, anchor='w', stretch=False)
+            tree.column(col, width=1, minwidth=1, anchor='w', stretch=False)
         tree.tag_configure('running', foreground='#facc15')
         tree.tag_configure('ok', foreground='#22c55e')
         tree.tag_configure('error', foreground='#fb7185')
         tree.tag_configure('wait', foreground='#60a5fa')
         tree.tag_configure('idle', foreground='#94a3b8')
         vsb = ttk.Scrollbar(wrap, orient='vertical', command=tree.yview)
-        hsb = ttk.Scrollbar(wrap, orient='horizontal', command=tree.xview)
-        tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        tree.configure(yscrollcommand=vsb.set)
         tree.grid(row=0, column=0, sticky='nsew')
         vsb.grid(row=0, column=1, sticky='ns')
-        hsb.grid(row=1, column=0, sticky='ew')
         wrap.rowconfigure(0, weight=1)
         wrap.columnconfigure(0, weight=1)
+        def resize_status_columns(_e=None, t=tree):
+            width = max(100, t.winfo_width() - 24)
+            ratios = {'time': 0.20, 'machine': 0.05, 'task': 0.30, 'status': 0.40, 'state': 0.05}
+            for c, ratio in ratios.items():
+                w = max(24, int(width * ratio))
+                t.column(c, width=w, minwidth=w, stretch=False)
+        tree.bind('<Configure>', resize_status_columns)
+        self.after(100, resize_status_columns)
 
         result_top = ttk.Frame(right_panel, style='Card.TFrame')
         result_top.pack(fill='both', expand=True, pady=(0, 8))
@@ -3276,8 +3281,19 @@ class XXTouchOnlyDemo(tk.Tk):
             ip = str(row.get('ip') or '').strip()
             if not ip:
                 raise XXTouchOpenAPIError('Thiếu IP')
-            client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=1.2, read_timeout=5)
-            client.recycle()
+            client = XXTouchOpenAPIClient(f'http://{ip}:46952', connect_timeout=0.8, read_timeout=8)
+            last_err = None
+            ok = False
+            for _ in range(3):
+                try:
+                    client.recycle()
+                    ok = True
+                    break
+                except Exception as e:
+                    last_err = e
+                    time.sleep(0.5)
+            if not ok:
+                raise last_err or XXTouchOpenAPIError('STOP SCRIPT thất bại')
             row['network'] = 'Online'
             row['xxtouch'] = 'Connected'
             row['updated'] = now_text()
