@@ -287,6 +287,7 @@ def ensure_router_defaults(router):
     router.setdefault('machine_list_history', [])
     router.setdefault('random_start_enabled', False)
     router.setdefault('random_start_seconds', '800')
+    router.setdefault('random_start_minutes', '')
     router.setdefault('remote_select', 'all')
     router.setdefault('group3_app', 'TikTok Lite')
     router.setdefault('inline_script', 'device = require("device")\nsys = require("sys")\n\nwhile (device.is_screen_locked()) do\n    device.unlock_screen()\n    sys.msleep(1000)\nend\n\nsys.toast("Screen unlocked, script starting")\n')
@@ -468,11 +469,17 @@ class XXTouchOnlyDemo(tk.Tk):
         router['_ui_random_start_var'] = random_var
         ttk.Checkbutton(row1, text='Random Start', variable=random_var, command=lambda r=router: self._save_random_start_settings(r)).pack(side='left', padx=(8, 4))
         random_entry = ttk.Entry(row1, width=8)
-        random_entry.insert(0, str(router.get('random_start_seconds', '800') or '800'))
+        saved_minutes = str(router.get('random_start_minutes') or '').strip()
+        if not saved_minutes:
+            try:
+                saved_minutes = str(max(1, int(round(int(str(router.get('random_start_seconds', '800') or '800')) / 60))))
+            except Exception:
+                saved_minutes = '15'
+        random_entry.insert(0, saved_minutes)
         random_entry.pack(side='left', padx=(0, 4))
         router['_ui_random_start_entry'] = random_entry
         random_entry.bind('<KeyRelease>', lambda _e, r=router: self._save_random_start_settings(r))
-        ttk.Label(row1, text='giây', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        ttk.Label(row1, text='phút', style='Sub.TLabel').pack(side='left', padx=(0, 8))
         ttk.Button(row1, text='STOP SCRIPT', command=lambda r=router: self._run_background(r, self._stop_scripts_for_router)).pack(side='left', padx=(0, 8))
         router['ui_mode'] = 'LIST MAY'
         self.after(50, lambda: self._save_router_machine_ui(router))
@@ -2193,12 +2200,14 @@ class XXTouchOnlyDemo(tk.Tk):
         var = router.get('_ui_random_start_var')
         entry = router.get('_ui_random_start_entry')
         router['random_start_enabled'] = bool(var.get()) if var is not None else bool(router.get('random_start_enabled', False))
-        value = entry.get().strip() if entry else str(router.get('random_start_seconds', '800')).strip()
+        value = entry.get().strip() if entry else str(router.get('random_start_minutes', '') or '').strip()
         digits = ''.join(ch for ch in value if ch.isdigit())
         if digits:
-            seconds = max(1, min(86400, int(digits)))
-            router['random_start_seconds'] = str(seconds)
+            minutes = max(1, min(1440, int(digits)))
+            router['random_start_minutes'] = str(minutes)
+            router['random_start_seconds'] = str(minutes * 60)
         elif value == '':
+            router['random_start_minutes'] = ''
             router['random_start_seconds'] = ''
         save_router_config(self.routers)
 
@@ -2208,11 +2217,15 @@ class XXTouchOnlyDemo(tk.Tk):
 
     def _random_start_seconds(self, router):
         entry = router.get('_ui_random_start_entry')
-        raw = entry.get().strip() if entry else str(router.get('random_start_seconds', '800')).strip()
+        raw = entry.get().strip() if entry else str(router.get('random_start_minutes', '') or '').strip()
         try:
-            return max(1, int(raw))
+            minutes = max(1, int(raw))
+            return minutes * 60
         except Exception:
-            return 800
+            try:
+                return max(1, int(router.get('random_start_seconds') or 900))
+            except Exception:
+                return 900
 
     def _record_machine_list_history(self, router, action_name):
         value = self._current_machine_list_value(router)
@@ -3216,7 +3229,7 @@ class XXTouchOnlyDemo(tk.Tk):
         random_seconds = self._random_start_seconds(router)
         if random_enabled:
             self._save_random_start_settings(router)
-            self._append_router_log(router, f'{action_name}: Random Start bật, rải {len(rows)} máy trong {random_seconds}s')
+            self._append_router_log(router, f'{action_name}: Random Start bật, rải {len(rows)} máy trong {max(1, int(round(random_seconds / 60)))} phút')
         self._append_router_log(router, f'{action_name}: bắt đầu chạy đồng thời {len(rows)} máy')
 
         def delayed_task(row, delay_seconds):
@@ -3237,9 +3250,21 @@ class XXTouchOnlyDemo(tk.Tk):
             return task(row)
 
         def build_random_start_delays(total, max_delay):
-            # Random Start phải chạy tất cả máy cùng lúc; mỗi máy tự chờ random riêng, không rải theo thứ tự.
+            total = max(0, int(total))
             span = max(0, int(max_delay))
-            return [random.randint(0, span) for _ in range(max(0, total))]
+            if total <= 0:
+                return []
+            if total == 1 or span <= 0:
+                return [0] * total
+            step = span / float(total - 1)
+            jitter = min(step * 0.35, step / 2.0)
+            delays = []
+            for idx in range(total):
+                base = idx * step
+                offset = random.uniform(-jitter, jitter) if 0 < idx < total - 1 else 0
+                delays.append(max(0, min(span, base + offset)))
+            random.shuffle(delays)
+            return delays
 
         delays = build_random_start_delays(len(rows), random_seconds) if random_enabled else [0] * len(rows)
 
