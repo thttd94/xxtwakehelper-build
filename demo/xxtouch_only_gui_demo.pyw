@@ -1345,10 +1345,10 @@ class XXTouchOnlyDemo(tk.Tk):
         columns = ('time', 'machine', 'task', 'status', 'state')
         tree = ttk.Treeview(wrap, columns=columns, show='headings', height=20)
         headings = {
-            'time': ('Thời gian', 0.20),
-            'machine': ('Số máy', 0.05),
+            'time': ('Thời gian', 0.10),
+            'machine': ('Số máy', 0.10),
             'task': ('Tác vụ', 0.30),
-            'status': ('Tiến trình', 0.40),
+            'status': ('Tiến trình', 0.45),
             'state': ('Trạng thái', 0.05),
         }
         for col, (title, ratio) in headings.items():
@@ -1367,11 +1367,13 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap.columnconfigure(0, weight=1)
         def resize_status_columns(_e=None, t=tree):
             width = max(100, t.winfo_width() - 24)
-            ratios = {'time': 0.20, 'machine': 0.05, 'task': 0.30, 'status': 0.40, 'state': 0.05}
+            ratios = {'time': 0.10, 'machine': 0.10, 'task': 0.30, 'status': 0.45, 'state': 0.05}
             for c, ratio in ratios.items():
                 w = max(24, int(width * ratio))
                 t.column(c, width=w, minwidth=w, stretch=False)
         tree.bind('<Configure>', resize_status_columns)
+        tree.bind('<Button-1>', lambda e: 'break' if t.identify_region(e.x, e.y) == 'separator' else None)
+        tree.bind('<B1-Motion>', lambda e: 'break' if t.identify_region(e.x, e.y) == 'separator' else None)
         self.after(100, resize_status_columns)
 
         result_top = ttk.Frame(right_panel, style='Card.TFrame')
