@@ -1344,16 +1344,17 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap.pack(fill='both', expand=True)
         columns = ('time', 'machine', 'task', 'status', 'state')
         tree = ttk.Treeview(wrap, columns=columns, show='headings', height=20)
+        total_width = 980
         headings = {
-            'time': ('Thời gian', 115),
-            'machine': ('Số máy', 80),
-            'task': ('Tác vụ', 150),
-            'status': ('Tiến trình', 383),
-            'state': ('Trạng thái', 447),
+            'time': ('Thời gian', int(total_width * 0.20)),
+            'machine': ('Số máy', int(total_width * 0.05)),
+            'task': ('Tác vụ', int(total_width * 0.30)),
+            'status': ('Tiến trình', int(total_width * 0.40)),
+            'state': ('Trạng thái', int(total_width * 0.05)),
         }
         for col, (title, width) in headings.items():
             tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
-            tree.column(col, width=width, anchor='w', stretch=(col in ('task', 'status')))
+            tree.column(col, width=width, minwidth=width, anchor='w', stretch=False)
         tree.tag_configure('running', foreground='#facc15')
         tree.tag_configure('ok', foreground='#22c55e')
         tree.tag_configure('error', foreground='#fb7185')
