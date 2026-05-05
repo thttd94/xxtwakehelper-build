@@ -1,4 +1,5 @@
 import base64
+import functools
 import json
 import os
 import random
@@ -1365,8 +1366,9 @@ class XXTouchOnlyDemo(tk.Tk):
             'status': ('Tiến trình', 0.45),
             'state': ('Trạng thái', 0.10),
         }
+        router['_status_heading_titles'] = {col: title for col, (title, _ratio) in headings.items()}
         for col, (title, ratio) in headings.items():
-            tree.heading(col, text=title, command=lambda c=col, r=router: self._sort_router_status_column(r, c))
+            tree.heading(col, text=title, command=lambda c=col, r=router: self._cycle_router_status_sort(r, c))
             tree.column(col, width=1, minwidth=1, anchor=('center' if col == 'machine' else 'w'), stretch=False)
         tree.tag_configure('running', foreground='#facc15')
         tree.tag_configure('ok', foreground='#22c55e')
@@ -1526,12 +1528,45 @@ class XXTouchOnlyDemo(tk.Tk):
         h, m = divmod(m, 60)
         return f'{h:02d}:{m:02d}:{s:02d}' if h else f'{m:02d}:{s:02d}'
 
-    def _sort_router_status_column(self, router, column):
+    def _cycle_router_status_sort(self, router, column):
         rid = id(router)
-        current = self.router_status_sort.get(rid, {'column': 'machine', 'reverse': False})
-        reverse = not bool(current.get('reverse')) if current.get('column') == column else False
-        self.router_status_sort[rid] = {'column': column, 'reverse': reverse}
+        chain = list(self.router_status_sort.get(rid, []))
+        found = None
+        for i, item in enumerate(chain):
+            if item.get('column') == column:
+                found = i
+                break
+        if found is None:
+            chain.append({'column': column, 'mode': 'az'})
+        else:
+            mode = chain[found].get('mode') or 'az'
+            if mode == 'az':
+                chain[found]['mode'] = 'za'
+            elif mode == 'za':
+                chain[found]['mode'] = 'group'
+            else:
+                chain.pop(found)
+        self.router_status_sort[rid] = chain
+        self._refresh_status_headings(router)
         self._refresh_router_logs(router)
+
+    def _refresh_status_headings(self, router):
+        tree = self.router_status_widgets.get(id(router))
+        if tree is None or not hasattr(tree, 'heading'):
+            return
+        titles = router.get('_status_heading_titles') or {
+            'time': 'Thời gian', 'machine': 'Số máy', 'task': 'Tác vụ', 'status': 'Tiến trình', 'state': 'Trạng thái'
+        }
+        chain = list(self.router_status_sort.get(id(router), []))
+        marker = {'az': 'A-Z', 'za': 'Z-A', 'group': 'Cụm'}
+        order = {item.get('column'): idx + 1 for idx, item in enumerate(chain)}
+        modes = {item.get('column'): item.get('mode') for item in chain}
+        for col, title in titles.items():
+            if col in order:
+                text = f'{title} [{order[col]}:{marker.get(modes.get(col), "")}]'
+            else:
+                text = title
+            tree.heading(col, text=text, command=lambda c=col, r=router: self._cycle_router_status_sort(r, c))
 
     def _visible_status_machines(self, router):
         states = router.get('_machine_status', {}) or {}
@@ -1654,6 +1689,35 @@ class XXTouchOnlyDemo(tk.Tk):
         if column == 'state':
             return self._status_state_text(st).lower()
         return self._natural_sort_key(st.get(column, ''))
+
+    def _status_sort_bucket(self, st, column):
+        if column == 'machine':
+            key = self._machine_sort_key(st.get('machine', ''))
+            return key[1] if key[0] == 0 else str(key[1]).lower()
+        if column == 'status':
+            status = str(st.get('status', '') or '')
+            sec = self._extract_status_seconds(status)
+            if sec is not None:
+                return f'sec:{sec}'
+            # cụm text trước số đầu tiên: "Chờ lần tiếp theo 171s" -> "chờ lần tiếp theo"
+            return re.sub(r'\d+.*$', '', status.lower()).strip() or status.lower()
+        if column == 'state':
+            return self._status_state_text(st).lower()
+        return re.sub(r'\d+.*$', '', str(st.get(column, '') or '').lower()).strip()
+
+    def _compare_status_rows(self, sort_chain, a, b):
+        sa, sb = a[1], b[1]
+        for item in sort_chain:
+            col = item.get('column')
+            mode = item.get('mode') or 'az'
+            va = self._status_sort_bucket(sa, col) if mode == 'group' else self._status_sort_value(sa, col)
+            vb = self._status_sort_bucket(sb, col) if mode == 'group' else self._status_sort_value(sb, col)
+            if va == vb:
+                continue
+            if mode == 'za':
+                return -1 if va > vb else 1
+            return -1 if va < vb else 1
+        return -1 if self._machine_sort_key(a[0]) < self._machine_sort_key(b[0]) else (1 if self._machine_sort_key(a[0]) > self._machine_sort_key(b[0]) else 0)
 
     def _schedule_router_status_refresh(self, router, delay_ms=250):
         rid = id(router)
@@ -1880,10 +1944,12 @@ class XXTouchOnlyDemo(tk.Tk):
                 st['_timer_text'] = timer
                 st['_timer_seconds'] = timer_seconds
                 prepared.append((machine, st))
-            sort_state = self.router_status_sort.get(id(router), {'column': 'machine', 'reverse': False})
-            sort_col = sort_state.get('column') or 'machine'
-            reverse = bool(sort_state.get('reverse'))
-            prepared.sort(key=lambda item: self._status_sort_value(item[1], sort_col), reverse=reverse)
+            sort_chain = list(self.router_status_sort.get(id(router), []))
+            if sort_chain:
+                prepared.sort(key=functools.cmp_to_key(lambda a, b: self._compare_status_rows(sort_chain, a, b)))
+            else:
+                prepared.sort(key=lambda item: self._machine_sort_key(item[0]))
+            self._refresh_status_headings(router)
             filters = self.router_status_filters.get(id(router), {})
             range_var = self.router_status_range_vars.get(id(router))
             allowed_machines = self._parse_machine_filter(range_var.get() if range_var is not None else '')
