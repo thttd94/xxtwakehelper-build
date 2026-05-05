@@ -17,11 +17,14 @@ FLOATING_MENU_PATH = LUA_DIR / 'floating_menu.lua'
 
 from xxtouch_openapi_client import XXTouchOpenAPIClient, XXTouchOpenAPIError
 
-CONFIG_PATH = Path(__file__).with_name('xxtouch_router_config.json')
-LOG_PATH = Path(__file__).with_name('xxtouch_only_gui_demo.log')
-MACHINE_LIST_HISTORY_LOG_PATH = Path(__file__).with_name('xxtouch_machine_list_history.log')
-TXT_POOL_PATH = Path(__file__).with_name('xxtouch_txt_pool.json')
-INLINE_SNIPPETS_PATH = Path(__file__).with_name('xxtouch_inline_snippets.json')
+APP_DIR = Path(__file__).resolve().parent
+DATA_DIR = APP_DIR / 'data'
+LOG_DIR = APP_DIR / 'logs'
+CONFIG_PATH = DATA_DIR / 'xxtouch_router_config.json'
+LOG_PATH = LOG_DIR / 'xxtouch_only_gui_demo.log'
+MACHINE_LIST_HISTORY_LOG_PATH = LOG_DIR / 'xxtouch_machine_list_history.log'
+TXT_POOL_PATH = DATA_DIR / 'xxtouch_txt_pool.json'
+INLINE_SNIPPETS_PATH = DATA_DIR / 'xxtouch_inline_snippets.json'
 TIKTOK_UID_RESULT_PATH = '/var/mobile/Media/1ferver/tiktok_uid_folders.txt'
 TIKTOK_UID_INLINE_LUA = r'''
 file = require("file")
@@ -193,7 +196,12 @@ DEFAULT_ROUTERS = [
 ]
 
 
+def ensure_app_dirs():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 def load_router_config():
+    ensure_app_dirs()
     if CONFIG_PATH.exists():
         try:
             data = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
@@ -205,6 +213,7 @@ def load_router_config():
 
 
 def load_txt_pool():
+    ensure_app_dirs()
     if TXT_POOL_PATH.exists():
         try:
             data = json.loads(TXT_POOL_PATH.read_text(encoding='utf-8'))
@@ -216,11 +225,13 @@ def load_txt_pool():
 
 
 def save_txt_pool(lines):
+    ensure_app_dirs()
     safe = [str(line).strip() for line in (lines or []) if str(line).strip()]
     TXT_POOL_PATH.write_text(json.dumps(safe, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
 def load_inline_snippets():
+    ensure_app_dirs()
     if INLINE_SNIPPETS_PATH.exists():
         try:
             data = json.loads(INLINE_SNIPPETS_PATH.read_text(encoding='utf-8'))
@@ -241,6 +252,7 @@ def load_inline_snippets():
 
 
 def save_inline_snippets(items):
+    ensure_app_dirs()
     safe = []
     for item in items or []:
         if not isinstance(item, dict):
@@ -253,6 +265,7 @@ def save_inline_snippets(items):
 
 
 def save_router_config(routers):
+    ensure_app_dirs()
     safe = []
     for router in routers:
         item = {}
