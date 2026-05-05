@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import random
+import re
 import socket
 import sys
 import threading
@@ -1593,18 +1594,44 @@ class XXTouchOnlyDemo(tk.Tk):
             return 'Đang chờ'
         return 'Đang chạy'
 
+    def _extract_status_seconds(self, text):
+        text = str(text or '')
+        patterns = [
+            r'còn\s+(\d+)\s*s\b',
+            r'còn\s+(\d+)\s*giây\b',
+            r'\b(\d+)\s*s\b',
+            r'\b(\d+)\s*giây\b',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    return int(m.group(1))
+                except Exception:
+                    pass
+        return None
+
+    def _natural_sort_key(self, value):
+        text = str(value or '').strip().lower()
+        parts = re.split(r'(\d+)', text)
+        return tuple(int(p) if p.isdigit() else p for p in parts)
+
     def _status_sort_value(self, st, column):
         if column == 'machine':
             return self._machine_sort_key(st.get('machine', ''))
         if column == 'time':
             return str(st.get('time', ''))
         if column == 'task':
-            return str(st.get('task', '')).lower()
+            return self._natural_sort_key(st.get('task', ''))
         if column == 'status':
-            return str(st.get('status', '')).lower()
+            status = str(st.get('status', '') or '')
+            sec = self._extract_status_seconds(status)
+            if sec is not None:
+                return (0, sec)
+            return (1, self._natural_sort_key(status))
         if column == 'state':
             return self._status_state_text(st).lower()
-        return str(st.get(column, '')).lower()
+        return self._natural_sort_key(st.get(column, ''))
 
     def _schedule_router_status_refresh(self, router, delay_ms=250):
         rid = id(router)
