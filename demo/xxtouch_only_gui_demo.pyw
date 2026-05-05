@@ -292,6 +292,7 @@ def ensure_router_defaults(router):
     router.setdefault('inline_script', 'device = require("device")\nsys = require("sys")\n\nwhile (device.is_screen_locked()) do\n    device.unlock_screen()\n    sys.msleep(1000)\nend\n\nsys.toast("Screen unlocked, script starting")\n')
     router.setdefault('ui_home_expanded', '')
     router.setdefault('last_failed_action', None)
+    router.setdefault('logs_machine_filter', '')
     return router
 
 
@@ -1314,7 +1315,7 @@ class XXTouchOnlyDemo(tk.Tk):
             tk.Checkbutton(filter_frame, text=label, variable=var, command=lambda r=router: self._refresh_router_logs(r), bg='#111827', fg='#e5e7eb', selectcolor='#0f172a', activebackground='#111827', activeforeground='#ffffff').pack(side='left', padx=(0, 14))
         ttk.Button(filter_frame, text='COPPY LIST', command=lambda r=router: self._copy_visible_status_machines(r)).pack(side='left', padx=(4, 12))
         ttk.Label(filter_frame, text='Máy:', style='Sub.TLabel').pack(side='left', padx=(0, 6))
-        range_var = tk.StringVar(value='')
+        range_var = tk.StringVar(value=str(router.get('logs_machine_filter', '') or ''))
         self.router_status_range_vars[id(router)] = range_var
         range_entry = ttk.Entry(filter_frame, textvariable=range_var, width=18)
         range_entry.pack(side='left')
@@ -1328,6 +1329,8 @@ class XXTouchOnlyDemo(tk.Tk):
             if cleaned != raw:
                 v.set(cleaned)
                 return
+            r['logs_machine_filter'] = raw
+            save_router_config(self.routers)
             self._refresh_router_logs(r)
         range_var.trace_add('write', on_range_change)
         body = ttk.Frame(card, style='Card.TFrame')
