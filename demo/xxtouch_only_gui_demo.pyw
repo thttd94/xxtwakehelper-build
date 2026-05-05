@@ -1303,9 +1303,18 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_status_range_vars[id(router)] = range_var
         range_entry = ttk.Entry(filter_frame, textvariable=range_var, width=18)
         range_entry.pack(side='left')
-        range_entry.bind('<Return>', lambda _e, r=router: self._refresh_router_logs(r))
-        ttk.Button(filter_frame, text='Áp dụng', command=lambda r=router: self._refresh_router_logs(r)).pack(side='left', padx=(6, 0))
-        ttk.Button(filter_frame, text='Tất cả', command=lambda v=range_var, r=router: (v.set(''), self._refresh_router_logs(r))).pack(side='left', padx=(6, 0))
+        def on_range_change(*_args, r=router, v=range_var):
+            raw = v.get()
+            cleaned = ''.join(ch for ch in raw if ch.isdigit() or ch in ',-| ' or ch.lower() in 'all')
+            # Only allow empty/all/numbers/separators. If letters are used, normalize to all when possible.
+            letters = ''.join(ch for ch in raw.lower() if ch.isalpha())
+            if letters:
+                cleaned = 'all' if 'all'.startswith(letters) or letters == 'all' else ''.join(ch for ch in raw if ch.isdigit() or ch in ',-| ')
+            if cleaned != raw:
+                v.set(cleaned)
+                return
+            self._refresh_router_logs(r)
+        range_var.trace_add('write', on_range_change)
         body = ttk.Frame(card, style='Card.TFrame')
         body.pack(fill='both', expand=True)
         left_panel = ttk.Frame(body, style='Card.TFrame')
@@ -1406,10 +1415,10 @@ class XXTouchOnlyDemo(tk.Tk):
 
     def _parse_machine_filter(self, text):
         text = str(text or '').strip()
-        if not text or text.lower() in ('all', 'tat ca', 'tất cả'):
+        if not text or text.lower() == 'all':
             return None
         allowed = set()
-        for part in text.replace(';', ',').split(','):
+        for part in text.replace('|', ',').split(','):
             part = part.strip()
             if not part:
                 continue
