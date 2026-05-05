@@ -1298,7 +1298,8 @@ class XXTouchOnlyDemo(tk.Tk):
             var = tk.BooleanVar(value=True)
             self.router_status_filters[id(router)][key] = var
             tk.Checkbutton(filter_frame, text=label, variable=var, command=lambda r=router: self._refresh_router_logs(r), bg='#111827', fg='#e5e7eb', selectcolor='#0f172a', activebackground='#111827', activeforeground='#ffffff').pack(side='left', padx=(0, 14))
-        ttk.Label(filter_frame, text='Máy:', style='Sub.TLabel').pack(side='left', padx=(10, 6))
+        ttk.Button(filter_frame, text='Copy máy đang show', command=lambda r=router: self._copy_visible_status_machines(r)).pack(side='left', padx=(4, 12))
+        ttk.Label(filter_frame, text='Máy:', style='Sub.TLabel').pack(side='left', padx=(0, 6))
         range_var = tk.StringVar(value='')
         self.router_status_range_vars[id(router)] = range_var
         range_entry = ttk.Entry(filter_frame, textvariable=range_var, width=18)
@@ -1447,6 +1448,33 @@ class XXTouchOnlyDemo(tk.Tk):
         reverse = not bool(current.get('reverse')) if current.get('column') == column else False
         self.router_status_sort[rid] = {'column': column, 'reverse': reverse}
         self._refresh_router_logs(router)
+
+    def _visible_status_machines(self, router):
+        states = router.get('_machine_status', {}) or {}
+        filters = self.router_status_filters.get(id(router), {})
+        range_var = self.router_status_range_vars.get(id(router))
+        allowed_machines = self._parse_machine_filter(range_var.get() if range_var is not None else '')
+        result = []
+        for machine, st in states.items():
+            machine_s = str(machine)
+            if allowed_machines is not None and machine_s not in allowed_machines:
+                continue
+            filter_key = self._status_filter_key(st)
+            show = bool(filters.get(filter_key).get()) if filters.get(filter_key) is not None else True
+            if show:
+                result.append(machine_s)
+        result.sort(key=self._machine_sort_key)
+        return result
+
+    def _copy_visible_status_machines(self, router):
+        machines = self._visible_status_machines(router)
+        text = ','.join(machines)
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+            self._append_router_log(router, f'COPY máy đang show: {text or "(rỗng)"}')
+        except Exception as e:
+            messagebox.showerror('Copy máy đang show', str(e))
 
     def _parse_machine_filter(self, text):
         text = str(text or '').strip()
