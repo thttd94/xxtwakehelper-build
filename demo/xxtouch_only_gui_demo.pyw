@@ -307,6 +307,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_status_filters = {}
         self.router_status_range_vars = {}
         self.router_pyw_results = {}
+        self.router_pyw_result_labels = {}
         self._router_status_refresh_pending = set()
         self._router_log_refresh_pending = set()
         self._router_mini_log_refresh_pending = set()
@@ -1356,18 +1357,27 @@ class XXTouchOnlyDemo(tk.Tk):
 
         result_top = ttk.Frame(right_panel, style='Card.TFrame')
         result_top.pack(fill='both', expand=True, pady=(0, 8))
-        ttk.Label(result_top, text='MÁY CHẠY XONG', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
+        ok_head = ttk.Frame(result_top, style='Card.TFrame')
+        ok_head.pack(fill='x', pady=(0, 4))
+        ttk.Label(ok_head, text='MÁY CHẠY XONG', style='Title.TLabel').pack(side='left')
+        ok_count_label = ttk.Label(ok_head, text='Tổng: 0 máy thành công', style='Sub.TLabel')
+        ok_count_label.pack(side='left', padx=(12, 0))
         ok_box = tk.Text(result_top, height=10, bg='#020617', fg='#22c55e', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
         ok_box.pack(fill='both', expand=True)
         ok_box.config(state='disabled')
 
         result_bottom = ttk.Frame(right_panel, style='Card.TFrame')
         result_bottom.pack(fill='both', expand=True)
-        ttk.Label(result_bottom, text='MÁY LỖI', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
+        err_head = ttk.Frame(result_bottom, style='Card.TFrame')
+        err_head.pack(fill='x', pady=(0, 4))
+        ttk.Label(err_head, text='MÁY LỖI', style='Title.TLabel').pack(side='left')
+        err_count_label = ttk.Label(err_head, text='Tổng: 0 máy lỗi', style='Sub.TLabel')
+        err_count_label.pack(side='left', padx=(12, 0))
         err_box = tk.Text(result_bottom, height=10, bg='#020617', fg='#fb7185', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
         err_box.pack(fill='both', expand=True)
         err_box.config(state='disabled')
         self.router_mini_log_widgets[id(router)] = {'error': err_box, 'ok': ok_box}
+        self.router_pyw_result_labels[id(router)] = {'error': err_count_label, 'ok': ok_count_label}
         self.router_logs_widgets[id(router)] = tree
         self.router_status_widgets[id(router)] = tree
         self._refresh_router_logs(router)
@@ -1399,6 +1409,11 @@ class XXTouchOnlyDemo(tk.Tk):
             err_rows = [(self._machine_sort_key(machine), line) for machine, line in result_state.get('error', {}).items()]
             ok_rows.sort(key=lambda x: x[0])
             err_rows.sort(key=lambda x: x[0])
+            labels = self.router_pyw_result_labels.get(id(router), {})
+            if labels.get('ok') is not None:
+                labels['ok'].config(text=f'Tổng: {len(ok_rows)} máy thành công')
+            if labels.get('error') is not None:
+                labels['error'].config(text=f'Tổng: {len(err_rows)} máy lỗi')
             if err_widget is not None:
                 err_widget.config(state='normal')
                 err_widget.delete('1.0', 'end')
