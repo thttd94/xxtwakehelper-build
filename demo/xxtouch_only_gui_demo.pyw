@@ -1418,24 +1418,28 @@ class XXTouchOnlyDemo(tk.Tk):
         if not text or text.lower() == 'all':
             return None
         allowed = set()
+        valid_any = False
         for part in text.replace('|', ',').split(','):
             part = part.strip()
             if not part:
                 continue
             if '-' in part:
-                a, b = part.split('-', 1)
-                try:
-                    start = int(a.strip())
-                    end = int(b.strip())
-                    if start > end:
-                        start, end = end, start
-                    for n in range(start, end + 1):
-                        allowed.add(str(n))
-                except Exception:
-                    continue
+                bits = part.split('-', 1)
+                if len(bits) != 2 or not bits[0].strip().isdigit() or not bits[1].strip().isdigit():
+                    return None
+                start = int(bits[0].strip())
+                end = int(bits[1].strip())
+                if start > end:
+                    start, end = end, start
+                for n in range(start, end + 1):
+                    allowed.add(str(n))
+                valid_any = True
             else:
+                if not part.isdigit():
+                    return None
                 allowed.add(part)
-        return allowed
+                valid_any = True
+        return allowed if valid_any else None
 
     def _status_filter_key(self, st):
         mode = str((st or {}).get('mode') or '').lower()
