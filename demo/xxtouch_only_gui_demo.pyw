@@ -3653,25 +3653,52 @@ end
         self._run_parallel_rows(router, rows, task, 'INLINE', per_success=lambda row: f'[{row.get("machine", "?")}] chạy inline OK')
 
 
-def _single_instance_or_exit():
-    lock_path = str(Path(__file__).with_suffix('.lock'))
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def _pid_is_alive(pid):
     try:
-        sock.bind(('127.0.0.1', 46953))
-        sock.listen(1)
-    except OSError:
+        if int(pid) <= 0:
+            return False
+        import ctypes
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    except Exception:
+        return False
+
+
+def _single_instance_or_exit():
+    lock_path = Path(__file__).with_suffix('.lock')
+    old_pid = ''
+    try:
+        old_pid = lock_path.read_text(encoding='utf-8').strip()
+    except Exception:
+        old_pid = ''
+    if old_pid and _pid_is_alive(old_pid):
         try:
-            messagebox.showinfo('Đang mở', 'PYW đang chạy rồi, không mở thêm cửa sổ thứ 2.')
+            messagebox.showinfo('Đang mở', f'PYW đang chạy rồi (PID {old_pid}). Nếu không thấy cửa sổ, mở Task Manager và End task pythonw.exe/pyw.exe.')
         except Exception:
             pass
         sys.exit(0)
     try:
-        Path(lock_path).write_text(str(os.getpid()), encoding='utf-8')
+        lock_path.write_text(str(os.getpid()), encoding='utf-8')
     except Exception:
         pass
-    return sock
+    return lock_path
+
+
+def _cleanup_single_instance(lock_path):
+    try:
+        p = Path(lock_path)
+        if p.exists() and p.read_text(encoding='utf-8').strip() == str(os.getpid()):
+            p.unlink()
+    except Exception:
+        pass
 
 if __name__ == '__main__':
-    _single_instance_socket = _single_instance_or_exit()
-    app = XXTouchOnlyDemo()
-    app.mainloop()
+    _single_instance_lock = _single_instance_or_exit()
+    try:
+        app = XXTouchOnlyDemo()
+        app.mainloop()
+    finally:
+        _cleanup_single_instance(_single_instance_lock)
