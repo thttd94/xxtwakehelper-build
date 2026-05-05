@@ -1297,10 +1297,20 @@ class XXTouchOnlyDemo(tk.Tk):
             var = tk.BooleanVar(value=True)
             self.router_status_filters[id(router)][key] = var
             tk.Checkbutton(filter_frame, text=label, variable=var, command=lambda r=router: self._refresh_router_logs(r), bg='#111827', fg='#e5e7eb', selectcolor='#0f172a', activebackground='#111827', activeforeground='#ffffff').pack(side='left', padx=(0, 14))
-        wrap = ttk.Frame(card, style='Card.TFrame')
+        body = ttk.Frame(card, style='Card.TFrame')
+        body.pack(fill='both', expand=True)
+        left_panel = ttk.Frame(body, style='Card.TFrame')
+        left_panel.grid(row=0, column=0, sticky='nsew', padx=(0, 8))
+        right_panel = ttk.Frame(body, style='Card.TFrame')
+        right_panel.grid(row=0, column=1, sticky='nsew', padx=(8, 0))
+        body.columnconfigure(0, weight=3)
+        body.columnconfigure(1, weight=2)
+        body.rowconfigure(0, weight=1)
+
+        wrap = ttk.Frame(left_panel, style='Card.TFrame')
         wrap.pack(fill='both', expand=True)
         columns = ('time', 'machine', 'task', 'status', 'state')
-        tree = ttk.Treeview(wrap, columns=columns, show='headings', height=12)
+        tree = ttk.Treeview(wrap, columns=columns, show='headings', height=20)
         headings = {
             'time': ('Thời gian', 115),
             'machine': ('Số máy', 80),
@@ -1325,10 +1335,10 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap.rowconfigure(0, weight=1)
         wrap.columnconfigure(0, weight=1)
 
-        result_head = ttk.Frame(card, style='Card.TFrame')
-        result_head.pack(fill='x', pady=(10, 4))
+        result_head = ttk.Frame(right_panel, style='Card.TFrame')
+        result_head.pack(fill='x', pady=(0, 4))
         ttk.Label(result_head, text='LOG KẾT QUẢ TÁC VỤ PYW', style='Title.TLabel').pack(side='left')
-        result_box = tk.Text(card, height=11, bg='#020617', fg='#e5e7eb', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        result_box = tk.Text(right_panel, height=20, bg='#020617', fg='#e5e7eb', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
         result_box.pack(fill='both', expand=True)
         result_box.config(state='disabled')
         self.router_mini_log_widgets[id(router)] = result_box
