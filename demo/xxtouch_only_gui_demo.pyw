@@ -306,6 +306,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_status_sort = {}
         self.router_status_filters = {}
         self.router_status_range_vars = {}
+        self.router_pyw_results = {}
         self._router_status_refresh_pending = set()
         self._router_log_refresh_pending = set()
         self._router_mini_log_refresh_pending = set()
@@ -1298,7 +1299,7 @@ class XXTouchOnlyDemo(tk.Tk):
             var = tk.BooleanVar(value=True)
             self.router_status_filters[id(router)][key] = var
             tk.Checkbutton(filter_frame, text=label, variable=var, command=lambda r=router: self._refresh_router_logs(r), bg='#111827', fg='#e5e7eb', selectcolor='#0f172a', activebackground='#111827', activeforeground='#ffffff').pack(side='left', padx=(0, 14))
-        ttk.Button(filter_frame, text='Copy máy đang show', command=lambda r=router: self._copy_visible_status_machines(r)).pack(side='left', padx=(4, 12))
+        ttk.Button(filter_frame, text='COPPY LIST', command=lambda r=router: self._copy_visible_status_machines(r)).pack(side='left', padx=(4, 12))
         ttk.Label(filter_frame, text='Máy:', style='Sub.TLabel').pack(side='left', padx=(0, 6))
         range_var = tk.StringVar(value='')
         self.router_status_range_vars[id(router)] = range_var
@@ -1356,23 +1357,36 @@ class XXTouchOnlyDemo(tk.Tk):
 
         result_top = ttk.Frame(right_panel, style='Card.TFrame')
         result_top.pack(fill='both', expand=True, pady=(0, 8))
-        ttk.Label(result_top, text='MÁY LỖI', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
-        err_box = tk.Text(result_top, height=10, bg='#020617', fg='#fb7185', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
-        err_box.pack(fill='both', expand=True)
-        err_box.config(state='disabled')
+        ttk.Label(result_top, text='MÁY CHẠY XONG', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
+        ok_box = tk.Text(result_top, height=10, bg='#020617', fg='#22c55e', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        ok_box.pack(fill='both', expand=True)
+        ok_box.config(state='disabled')
 
         result_bottom = ttk.Frame(right_panel, style='Card.TFrame')
         result_bottom.pack(fill='both', expand=True)
-        ttk.Label(result_bottom, text='MÁY CHẠY XONG', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
-        ok_box = tk.Text(result_bottom, height=10, bg='#020617', fg='#22c55e', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
-        ok_box.pack(fill='both', expand=True)
-        ok_box.config(state='disabled')
+        ttk.Label(result_bottom, text='MÁY LỖI', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
+        err_box = tk.Text(result_bottom, height=10, bg='#020617', fg='#fb7185', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        err_box.pack(fill='both', expand=True)
+        err_box.config(state='disabled')
         self.router_mini_log_widgets[id(router)] = {'error': err_box, 'ok': ok_box}
         self.router_logs_widgets[id(router)] = tree
         self.router_status_widgets[id(router)] = tree
         self._refresh_router_logs(router)
         self._refresh_router_mini_log(router)
         self._refresh_router_status_tick(router)
+
+    def _record_pyw_result(self, router, row, action_name, ok=True, detail=''):
+        rid = id(router)
+        state = self.router_pyw_results.setdefault(rid, {'ok': {}, 'error': {}})
+        machine = str(row.get('machine', '?')).strip() or '?'
+        line = f'[{machine}] {action_name}: {self._clean_status_text(detail or ("OK" if ok else "Lỗi"))}'
+        if ok:
+            state['error'].pop(machine, None)
+            state['ok'][machine] = line
+        else:
+            state['ok'].pop(machine, None)
+            state['error'][machine] = line
+        self._refresh_router_mini_log(router)
 
     def _refresh_router_mini_log(self, router):
         widgets = self.router_mini_log_widgets.get(id(router))
@@ -1381,20 +1395,9 @@ class XXTouchOnlyDemo(tk.Tk):
         try:
             err_widget = widgets.get('error') if isinstance(widgets, dict) else widgets
             ok_widget = widgets.get('ok') if isinstance(widgets, dict) else None
-            rows = list(router.get('rows', []) or [])
-            states = router.get('_machine_status', {}) or {}
-            ok_rows = []
-            err_rows = []
-            for row in rows:
-                machine = str(row.get('machine', '?')).strip() or '?'
-                st = states.get(machine) or {}
-                status = str(st.get('status') or row.get('note') or '')
-                task = str(st.get('task') or row.get('selected_script') or row.get('ui_selected_script') or '')
-                key = self._status_filter_key(st) if st else ''
-                if key == 'error' or status.startswith('ERROR') or row.get('network') == 'Lỗi':
-                    err_rows.append((self._machine_sort_key(machine), f'[{machine}] {task}: {self._clean_status_text(status)}'))
-                elif key == 'ok' or row.get('network') == 'OK':
-                    ok_rows.append((self._machine_sort_key(machine), f'[{machine}] {task}: {self._clean_status_text(status or "OK")}'))
+            result_state = self.router_pyw_results.get(id(router), {'ok': {}, 'error': {}})
+            ok_rows = [(self._machine_sort_key(machine), line) for machine, line in result_state.get('ok', {}).items()]
+            err_rows = [(self._machine_sort_key(machine), line) for machine, line in result_state.get('error', {}).items()]
             ok_rows.sort(key=lambda x: x[0])
             err_rows.sort(key=lambda x: x[0])
             if err_widget is not None:
@@ -3201,6 +3204,7 @@ class XXTouchOnlyDemo(tk.Tk):
                         row['network'] = 'OK'
                         row['note'] = f'{action_name}: OK'
                         self._set_machine_status(router, row, action_name, 'OK', mode='ok')
+                        self.after(0, lambda r=row: self._record_pyw_result(router, r, action_name, ok=True, detail='OK'))
                         if per_success:
                             self.after(0, lambda r=row: self._append_router_log(router, per_success(r)))
                     except Exception as e:
@@ -3212,6 +3216,7 @@ class XXTouchOnlyDemo(tk.Tk):
                         failed_rows.append(machine)
                         failed_by_error.setdefault(err, []).append(machine)
                         self._set_machine_status(router, row, action_name, f'Lỗi: {err}', mode='error')
+                        self.after(0, lambda r=row, err=err: self._record_pyw_result(router, r, action_name, ok=False, detail=err))
                         self.after(0, lambda r=row, err=err: self._append_router_log(router, f'[{r.get("machine", "?")}] {action_name} lỗi: {err}'))
             router['last_failed_action'] = None
             if failed_rows:
