@@ -829,7 +829,7 @@ class XXTouchOnlyDemo(tk.Tk):
     def _uid_tab(self, parent, router):
         top = ttk.Frame(parent, style='Card.TFrame')
         top.pack(fill='x', pady=(0, 10))
-        ttk.Label(top, text='Lấy UID TikTok từ 2 thư mục Documents/<số> và Documents/AWEIMGoupMockAvatar/<số>', style='Title.TLabel').pack(side='left')
+        ttk.Label(top, text='SCAN UID VÀ USE', style='Title.TLabel').pack(side='left')
         ttk.Button(top, text='Quét ALL máy router này', command=lambda r=router: self._run_background(r, self._scan_tiktok_uid_for_router)).pack(side='right', padx=(8, 0))
         ttk.Button(top, text='Xuất TXT', command=lambda r=router: self._export_uid_results(r)).pack(side='right', padx=(8, 0))
         ttk.Button(top, text='Copy USER LITE', command=lambda r=router: self._copy_uid_column(r, 'lite_user')).pack(side='right', padx=(8, 0))
@@ -1290,7 +1290,6 @@ class XXTouchOnlyDemo(tk.Tk):
         head = ttk.Frame(card, style='Card.TFrame')
         head.pack(fill='x', pady=(0, 8))
         ttk.Label(head, text='STATUS THEO MÁY', style='Title.TLabel').pack(side='left')
-        ttk.Label(head, text=f'File: {LOG_PATH.name}', style='Sub.TLabel').pack(side='left', padx=(12, 0))
         ttk.Button(head, text='Mở file log', command=lambda: self._open_log_file()).pack(side='right')
         filter_frame = ttk.Frame(card, style='Card.TFrame')
         filter_frame.pack(fill='x', pady=(0, 8))
