@@ -1371,9 +1371,19 @@ class XXTouchOnlyDemo(tk.Tk):
             for c, ratio in ratios.items():
                 w = max(24, int(width * ratio))
                 t.column(c, width=w, minwidth=w, stretch=False)
+        def block_column_resize(event, t=tree):
+            try:
+                region = t.identify_region(event.x, event.y)
+                element = t.identify_element(event.x, event.y)
+                if region == 'separator' or 'separator' in str(element).lower():
+                    return 'break'
+            except Exception:
+                pass
+            return None
         tree.bind('<Configure>', resize_status_columns)
-        tree.bind('<Button-1>', lambda e: 'break' if t.identify_region(e.x, e.y) == 'separator' else None)
-        tree.bind('<B1-Motion>', lambda e: 'break' if t.identify_region(e.x, e.y) == 'separator' else None)
+        tree.bind('<ButtonPress-1>', block_column_resize)
+        tree.bind('<B1-Motion>', block_column_resize)
+        tree.bind('<ButtonRelease-1>', lambda e, t=tree: (resize_status_columns(), 'break')[1] if t.identify_region(e.x, e.y) == 'separator' else None)
         self.after(100, resize_status_columns)
 
         result_top = ttk.Frame(right_panel, style='Card.TFrame')
