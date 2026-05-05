@@ -1558,12 +1558,10 @@ class XXTouchOnlyDemo(tk.Tk):
             'time': 'Thời gian', 'machine': 'Số máy', 'task': 'Tác vụ', 'status': 'Tiến trình', 'state': 'Trạng thái'
         }
         chain = list(self.router_status_sort.get(id(router), []))
-        marker = {'az': 'A-Z', 'za': 'Z-A', 'group': 'Cụm'}
         order = {item.get('column'): idx + 1 for idx, item in enumerate(chain)}
-        modes = {item.get('column'): item.get('mode') for item in chain}
         for col, title in titles.items():
             if col in order:
-                text = f'{title} [{order[col]}:{marker.get(modes.get(col), "")}]'
+                text = f'{title} [{order[col]}]'
             else:
                 text = title
             tree.heading(col, text=text, command=lambda c=col, r=router: self._cycle_router_status_sort(r, c))
