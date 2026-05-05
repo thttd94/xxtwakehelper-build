@@ -458,6 +458,7 @@ class XXTouchOnlyDemo(tk.Tk):
         router['_ui_random_start_entry'] = random_entry
         random_entry.bind('<KeyRelease>', lambda _e, r=router: self._save_random_start_settings(r))
         ttk.Label(row1, text='giây', style='Sub.TLabel').pack(side='left', padx=(0, 8))
+        ttk.Button(row1, text='STOP SCRIPT', command=lambda r=router: self._run_background(r, self._stop_scripts_for_router)).pack(side='left', padx=(0, 8))
         router['ui_mode'] = 'LIST MAY'
         self.after(50, lambda: self._save_router_machine_ui(router))
 
@@ -479,11 +480,10 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_mini_log_widgets[id(router)] = mini_log
         self._refresh_router_mini_log(router)
         primary_specs = [
-            ('STOP SCRIPT', lambda r=router: self._run_background(r, self._stop_scripts_for_router)),
-            ('HOME', lambda r=router: self._run_background(r, self._run_home_for_router)),
-            ('LOCK HOME', lambda r=router: self._run_background(r, self._run_lock_home_for_router)),
-            ('GỠ APP RÁC', lambda r=router: self._run_background(r, self._run_clear_app_for_router)),
-            ('RE-ACTION', lambda r=router: self._run_background(r, self._rerun_last_failed_action_for_router)),
+            ('HOME', lambda r=router: self._run_background_confirm_random(r, self._run_home_for_router)),
+            ('LOCK HOME', lambda r=router: self._run_background_confirm_random(r, self._run_lock_home_for_router)),
+            ('GỠ APP RÁC', lambda r=router: self._run_background_confirm_random(r, self._run_clear_app_for_router)),
+            ('RE-ACTION', lambda r=router: self._run_background_confirm_random(r, self._rerun_last_failed_action_for_router)),
             ('CHỌN FILE', lambda r=router: self._choose_files_for_router(r)),
             ('SEND FILE', lambda r=router: self._open_send_file_dest_popup(r)),
         ]
@@ -508,11 +508,11 @@ class XXTouchOnlyDemo(tk.Tk):
         app_group = ttk.LabelFrame(box, text='Quản lý app', padding=10)
         app_group.pack(fill='x', pady=(0, 8))
         app_specs = [
-            ('GỠ TIKTOK LITE', lambda r=router: self._run_background(r, self._run_remove_tiktok_lite_for_router)),
-            ('GỠ TIKTOK', lambda r=router: self._run_background(r, self._run_remove_tiktok_for_router)),
-            ('CÀI TIKTOK', lambda r=router: self._run_background(r, self._run_install_tiktok_for_router)),
-            ('CÀI TIKTOK LITE', lambda r=router: self._run_background(r, self._run_install_tiktok_lite_for_router)),
-            ('ĐÓNG ỨNG DỤNG', lambda r=router: self._run_background(r, self._run_quit_apps_for_router)),
+            ('GỠ TIKTOK LITE', lambda r=router: self._run_background_confirm_random(r, self._run_remove_tiktok_lite_for_router)),
+            ('GỠ TIKTOK', lambda r=router: self._run_background_confirm_random(r, self._run_remove_tiktok_for_router)),
+            ('CÀI TIKTOK', lambda r=router: self._run_background_confirm_random(r, self._run_install_tiktok_for_router)),
+            ('CÀI TIKTOK LITE', lambda r=router: self._run_background_confirm_random(r, self._run_install_tiktok_lite_for_router)),
+            ('ĐÓNG ỨNG DỤNG', lambda r=router: self._run_background_confirm_random(r, self._run_quit_apps_for_router)),
         ]
         for idx, (text, cmd) in enumerate(app_specs):
             ttk.Button(app_group, text=text, command=cmd).grid(row=0, column=idx, padx=4, pady=2, sticky='w')
@@ -586,7 +586,7 @@ class XXTouchOnlyDemo(tk.Tk):
             action_key = spec['key']
             row = ttk.Frame(card, style='Card.TFrame')
             row.pack(fill='x', pady=4)
-            ttk.Button(row, text=name, width=24, command=lambda a=action_key, r=router: self._run_background(r, lambda rr: self._run_group3_action(rr, a))).pack(side='left', padx=(0, 8))
+            ttk.Button(row, text=name, width=24, command=lambda a=action_key, r=router: self._run_background_confirm_random(r, lambda rr: self._run_group3_action(rr, a))).pack(side='left', padx=(0, 8))
             if spec['schedule']:
                 time_entry = ttk.Entry(row, width=8)
                 time_entry.insert(0, spec['time'])
@@ -1864,6 +1864,14 @@ class XXTouchOnlyDemo(tk.Tk):
             except Exception as e:
                 self.after(0, lambda: self._append_router_log(router, f'Lỗi nền: {e}'))
         threading.Thread(target=worker, daemon=True).start()
+
+    def _run_background_confirm_random(self, router, fn):
+        if self._random_start_enabled(router):
+            ok = messagebox.askokcancel('Random Start', 'Bạn đang chạy random.\n\nĐồng ý để tiếp tục chạy, Huỷ bỏ để không chạy nữa.')
+            if not ok:
+                self._append_router_log(router, 'Huỷ tác vụ vì Random Start đang bật')
+                return
+        self._run_background(router, fn)
 
     def _on_router_tab_changed(self, _event=None):
         self._update_header_status()
