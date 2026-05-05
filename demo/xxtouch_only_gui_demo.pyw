@@ -2135,7 +2135,7 @@ class XXTouchOnlyDemo(tk.Tk):
             row['updated'] = now_text()
             return row
 
-        self._run_parallel_rows(router, rows, task, 'SEND FILE', per_success=lambda row: f'[{row.get("machine", "?")}] SEND FILE OK ({len(files)} file -> {target_dir})')
+        self._run_parallel_rows(router, rows, task, 'SEND FILE', per_success=lambda row: f'[{row.get("machine", "?")}] SEND FILE OK ({len(files)} file -> {target_dir})', ignore_random=True)
         router['selected_files'] = []
         save_router_config(self.routers)
         self._refresh_selected_files(router)
@@ -2413,7 +2413,7 @@ class XXTouchOnlyDemo(tk.Tk):
 
         self._run_parallel_rows(router, rows, task, 'SCAN', per_success=lambda row: f'[{row.get("machine", "?")}] SCAN OK')
 
-    def _simple_router_action(self, router, action, log_text):
+    def _simple_router_action(self, router, action, log_text, ignore_random=False):
         rows = self._selected_rows(router)
         if not rows:
             self._append_router_log(router, f'{action}: không có máy nào được chọn')
@@ -2431,7 +2431,7 @@ class XXTouchOnlyDemo(tk.Tk):
             row['xxtouch'] = 'Connected'
             return row
 
-        self._run_parallel_rows(router, rows, task, action, per_success=lambda row: f'[{row.get("machine", "?")}] {log_text}')
+        self._run_parallel_rows(router, rows, task, action, per_success=lambda row: f'[{row.get("machine", "?")}] {log_text}', ignore_random=ignore_random)
 
     def _open_full_devices_info(self, router):
         win = tk.Toplevel(self)
@@ -2769,7 +2769,7 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(body, text='Chức năng mở rộng', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
         ttk.Label(body, text='Các nút phụ được gom vào đây để giao diện chính gọn hơn', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
         ttk.Button(body, text='SCAN', command=lambda: (win.destroy(), self._run_background(router, self._scan_router))).pack(anchor='w', pady=2)
-        ttk.Button(body, text='REBOOT', command=lambda: (win.destroy(), self._run_background(router, lambda rr: self._simple_router_action(rr, 'reboot2', 'Đã gửi lệnh reboot')))).pack(anchor='w', pady=2)
+        ttk.Button(body, text='REBOOT', command=lambda: (win.destroy(), self._run_background(router, lambda rr: self._simple_router_action(rr, 'reboot2', 'Đã gửi lệnh reboot', ignore_random=True)))).pack(anchor='w', pady=2)
         ttk.Button(body, text='TXT', command=lambda: (win.destroy(), self._open_txt_lines_popup(router))).pack(anchor='w', pady=2)
         ttk.Button(body, text='Select Script', command=lambda: (win.destroy(), self._open_select_script_popup(router))).pack(anchor='w', pady=2)
         ttk.Button(body, text='Đóng', command=win.destroy).pack(side='right', pady=(18, 0))
@@ -3173,12 +3173,12 @@ class XXTouchOnlyDemo(tk.Tk):
         except Exception:
             pass
 
-    def _run_parallel_rows(self, router, rows, task, action_name, per_success=None):
+    def _run_parallel_rows(self, router, rows, task, action_name, per_success=None, ignore_random=False):
         if not rows:
             self._append_router_log(router, f'{action_name}: không có máy nào được chọn')
             return
         self._record_machine_list_history(router, action_name)
-        random_enabled = self._random_start_enabled(router)
+        random_enabled = (not ignore_random) and self._random_start_enabled(router)
         random_seconds = self._random_start_seconds(router)
         if random_enabled:
             self._save_random_start_settings(router)
@@ -3269,7 +3269,7 @@ class XXTouchOnlyDemo(tk.Tk):
             row['updated'] = now_text()
             return row
 
-        self._run_parallel_rows(router, rows, task, 'STOP SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] STOP SCRIPT OK')
+        self._run_parallel_rows(router, rows, task, 'STOP SCRIPT', per_success=lambda row: f'[{row.get("machine", "?")}] STOP SCRIPT OK', ignore_random=True)
 
     def _run_home_for_router(self, router):
         rows = self._selected_rows(router)
