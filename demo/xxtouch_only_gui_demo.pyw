@@ -3207,7 +3207,7 @@ class XXTouchOnlyDemo(tk.Tk):
         except Exception:
             pass
 
-    def _run_parallel_rows(self, router, rows, task, action_name, per_success=None, ignore_random=False):
+    def _run_parallel_rows(self, router, rows, task, action_name, per_success=None, ignore_random=False, record_success=True):
         if not rows:
             self._append_router_log(router, f'{action_name}: không có máy nào được chọn')
             return
@@ -3260,7 +3260,8 @@ class XXTouchOnlyDemo(tk.Tk):
                         row['network'] = 'OK'
                         row['note'] = f'{action_name}: OK'
                         self._set_machine_status(router, row, action_name, 'OK', mode='ok')
-                        self.after(0, lambda r=row: self._record_pyw_result(router, r, action_name, ok=True, detail='OK'))
+                        if record_success:
+                            self.after(0, lambda r=row: self._record_pyw_result(router, r, action_name, ok=True, detail='OK'))
                         if per_success:
                             self.after(0, lambda r=row: self._append_router_log(router, per_success(r)))
                     except Exception as e:
@@ -3645,7 +3646,7 @@ end
             return self._spawn_task_for_row(router, row, command, action_name, stop_first=stop_first, read_timeout=read_timeout, wait_lua_done=wait_lua_done)
 
         ok_label = 'CHẠY XONG OK' if wait_lua_done else 'START OK'
-        self._run_parallel_rows(router, rows, task, action_name, per_success=lambda row: f'[{row.get("machine", "?")}] {action_name} {ok_label}')
+        self._run_parallel_rows(router, rows, task, action_name, per_success=lambda row: f'[{row.get("machine", "?")}] {action_name} {ok_label}', record_success=wait_lua_done)
 
     def _run_spawn_batched_for_router(self, router, command, action_name, batch_size=10, batch_delay=10, stop_first=True, read_timeout=6):
         rows = self._selected_rows(router)
