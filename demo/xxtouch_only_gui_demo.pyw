@@ -305,6 +305,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_status_widgets = {}
         self.router_status_sort = {}
         self.router_status_filters = {}
+        self.router_status_range_vars = {}
         self._router_status_refresh_pending = set()
         self._router_log_refresh_pending = set()
         self._router_mini_log_refresh_pending = set()
@@ -1297,6 +1298,14 @@ class XXTouchOnlyDemo(tk.Tk):
             var = tk.BooleanVar(value=True)
             self.router_status_filters[id(router)][key] = var
             tk.Checkbutton(filter_frame, text=label, variable=var, command=lambda r=router: self._refresh_router_logs(r), bg='#111827', fg='#e5e7eb', selectcolor='#0f172a', activebackground='#111827', activeforeground='#ffffff').pack(side='left', padx=(0, 14))
+        ttk.Label(filter_frame, text='Máy:', style='Sub.TLabel').pack(side='left', padx=(10, 6))
+        range_var = tk.StringVar(value='')
+        self.router_status_range_vars[id(router)] = range_var
+        range_entry = ttk.Entry(filter_frame, textvariable=range_var, width=18)
+        range_entry.pack(side='left')
+        range_entry.bind('<Return>', lambda _e, r=router: self._refresh_router_logs(r))
+        ttk.Button(filter_frame, text='Áp dụng', command=lambda r=router: self._refresh_router_logs(r)).pack(side='left', padx=(6, 0))
+        ttk.Button(filter_frame, text='Tất cả', command=lambda v=range_var, r=router: (v.set(''), self._refresh_router_logs(r))).pack(side='left', padx=(6, 0))
         body = ttk.Frame(card, style='Card.TFrame')
         body.pack(fill='both', expand=True)
         left_panel = ttk.Frame(body, style='Card.TFrame')
@@ -1394,6 +1403,30 @@ class XXTouchOnlyDemo(tk.Tk):
         reverse = not bool(current.get('reverse')) if current.get('column') == column else False
         self.router_status_sort[rid] = {'column': column, 'reverse': reverse}
         self._refresh_router_logs(router)
+
+    def _parse_machine_filter(self, text):
+        text = str(text or '').strip()
+        if not text or text.lower() in ('all', 'tat ca', 'tất cả'):
+            return None
+        allowed = set()
+        for part in text.replace(';', ',').split(','):
+            part = part.strip()
+            if not part:
+                continue
+            if '-' in part:
+                a, b = part.split('-', 1)
+                try:
+                    start = int(a.strip())
+                    end = int(b.strip())
+                    if start > end:
+                        start, end = end, start
+                    for n in range(start, end + 1):
+                        allowed.add(str(n))
+                except Exception:
+                    continue
+            else:
+                allowed.add(part)
+        return allowed
 
     def _status_filter_key(self, st):
         mode = str((st or {}).get('mode') or '').lower()
@@ -1652,7 +1685,13 @@ class XXTouchOnlyDemo(tk.Tk):
             reverse = bool(sort_state.get('reverse'))
             prepared.sort(key=lambda item: self._status_sort_value(item[1], sort_col), reverse=reverse)
             filters = self.router_status_filters.get(id(router), {})
+            range_var = self.router_status_range_vars.get(id(router))
+            allowed_machines = self._parse_machine_filter(range_var.get() if range_var is not None else '')
             for machine, st in prepared:
+                if allowed_machines is not None and str(machine) not in allowed_machines:
+                    if machine in existing:
+                        widget.delete(machine)
+                    continue
                 filter_key = self._status_filter_key(st)
                 show = bool(filters.get(filter_key).get()) if filters.get(filter_key) is not None else True
                 if not show:
