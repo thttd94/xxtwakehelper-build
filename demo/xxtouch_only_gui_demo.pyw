@@ -1835,9 +1835,18 @@ class XXTouchOnlyDemo(tk.Tk):
 
     def _finish_external_status_poll(self, router, router_id, updates):
         self._external_status_poll_running.discard(router_id)
+        states = router.setdefault('_machine_status', {})
         for row, task, status_text, mode in updates:
             status_text = str(status_text or '').strip()
             if not status_text:
+                continue
+            machine = str(row.get('machine', '?')).strip() or '?'
+            prev = states.get(machine, {})
+            prev_task = str(prev.get('task') or '')
+            prev_status = str(prev.get('status') or '')
+            # STOPPED_BY_PYW là marker dừng của phiên cũ. Nếu sau đó PYW vừa chạy action mới
+            # như HOME/LOCK/... và đã có OK, không để poll status client cũ ghi đè lại thành Đã dừng.
+            if status_text == 'STOPPED_BY_PYW' and prev_status and prev_status != 'STOPPED_BY_PYW' and prev_task and prev_task != task:
                 continue
             row['note'] = status_text
             row['updated'] = now_text()
