@@ -1457,8 +1457,20 @@ class XXTouchOnlyDemo(tk.Tk):
         if widgets is None:
             return
         try:
-            err_widget = widgets.get('error') if isinstance(widgets, dict) else widgets
-            ok_widget = widgets.get('ok') if isinstance(widgets, dict) else None
+            if not isinstance(widgets, dict):
+                widgets.config(state='normal')
+                widgets.delete('1.0', 'end')
+                lines = list(router.get('logs', []) or [])[-120:]
+                if lines:
+                    for idx, line in enumerate(reversed(lines)):
+                        widgets.insert('end', line + '\n', f'mini{idx % 5}')
+                else:
+                    widgets.insert('end', '(chưa có log)\n')
+                widgets.see('1.0')
+                widgets.config(state='disabled')
+                return
+            err_widget = widgets.get('error')
+            ok_widget = widgets.get('ok')
             result_state = self.router_pyw_results.get(id(router), {'ok': {}, 'error': {}})
             ok_rows = [(self._machine_sort_key(machine), line) for machine, line in result_state.get('ok', {}).items()]
             err_rows = [(self._machine_sort_key(machine), line) for machine, line in result_state.get('error', {}).items()]
