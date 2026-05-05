@@ -3653,35 +3653,46 @@ end
         self._run_parallel_rows(router, rows, task, 'INLINE', per_success=lambda row: f'[{row.get("machine", "?")}] chạy inline OK')
 
 
-def _pid_is_alive(pid):
+def _process_cmdline(pid):
     try:
-        if int(pid) <= 0:
-            return False
-        import ctypes
-        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
+        import subprocess
+        out = subprocess.check_output(
+            ['wmic', 'process', 'where', f'ProcessId={int(pid)}', 'get', 'CommandLine', '/value'],
+            stderr=subprocess.DEVNULL,
+            timeout=2,
+        ).decode('utf-8', 'replace')
+        for line in out.splitlines():
+            if line.startswith('CommandLine='):
+                return line.split('=', 1)[1]
     except Exception:
-        return False
+        return ''
+    return ''
 
 
 def _single_instance_or_exit():
     lock_path = Path(__file__).with_suffix('.lock')
+    script_path = str(Path(__file__).resolve()).lower()
     old_pid = ''
+    old_script = ''
     try:
-        old_pid = lock_path.read_text(encoding='utf-8').strip()
+        data = json.loads(lock_path.read_text(encoding='utf-8'))
+        old_pid = str(data.get('pid') or '').strip()
+        old_script = str(data.get('script') or '').strip().lower()
     except Exception:
-        old_pid = ''
-    if old_pid and _pid_is_alive(old_pid):
         try:
-            messagebox.showinfo('Đang mở', f'PYW đang chạy rồi (PID {old_pid}). Nếu không thấy cửa sổ, mở Task Manager và End task pythonw.exe/pyw.exe.')
+            old_pid = lock_path.read_text(encoding='utf-8').strip()
         except Exception:
-            pass
-        sys.exit(0)
+            old_pid = ''
+    if old_pid and old_script == script_path:
+        cmd = _process_cmdline(old_pid)
+        if script_path in cmd.lower():
+            try:
+                messagebox.showinfo('Đang mở', f'File PYW này đang chạy rồi (PID {old_pid}).')
+            except Exception:
+                pass
+            sys.exit(0)
     try:
-        lock_path.write_text(str(os.getpid()), encoding='utf-8')
+        lock_path.write_text(json.dumps({'pid': os.getpid(), 'script': str(Path(__file__).resolve())}, ensure_ascii=False), encoding='utf-8')
     except Exception:
         pass
     return lock_path
@@ -3690,7 +3701,8 @@ def _single_instance_or_exit():
 def _cleanup_single_instance(lock_path):
     try:
         p = Path(lock_path)
-        if p.exists() and p.read_text(encoding='utf-8').strip() == str(os.getpid()):
+        data = json.loads(p.read_text(encoding='utf-8'))
+        if str(data.get('pid') or '') == str(os.getpid()):
             p.unlink()
     except Exception:
         pass
