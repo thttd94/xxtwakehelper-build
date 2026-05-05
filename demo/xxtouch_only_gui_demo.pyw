@@ -304,6 +304,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.router_mini_log_widgets = {}
         self.router_status_widgets = {}
         self.router_status_sort = {}
+        self.router_status_filters = {}
         self._router_status_refresh_pending = set()
         self._router_log_refresh_pending = set()
         self._router_mini_log_refresh_pending = set()
@@ -1289,6 +1290,13 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(head, text='STATUS THEO MÁY', style='Title.TLabel').pack(side='left')
         ttk.Label(head, text=f'File: {LOG_PATH.name}', style='Sub.TLabel').pack(side='left', padx=(12, 0))
         ttk.Button(head, text='Mở file log', command=lambda: self._open_log_file()).pack(side='right')
+        filter_frame = ttk.Frame(card, style='Card.TFrame')
+        filter_frame.pack(fill='x', pady=(0, 8))
+        self.router_status_filters[id(router)] = {}
+        for key, label in [('running', 'Đang chạy'), ('wait', 'Đang chờ'), ('ok', 'Chạy xong'), ('error', 'Lỗi')]:
+            var = tk.BooleanVar(value=True)
+            self.router_status_filters[id(router)][key] = var
+            tk.Checkbutton(filter_frame, text=label, variable=var, command=lambda r=router: self._refresh_router_logs(r), bg='#111827', fg='#e5e7eb', selectcolor='#0f172a', activebackground='#111827', activeforeground='#ffffff').pack(side='left', padx=(0, 14))
         wrap = ttk.Frame(card, style='Card.TFrame')
         wrap.pack(fill='both', expand=True)
         columns = ('time', 'machine', 'task', 'status', 'state')
@@ -1376,6 +1384,17 @@ class XXTouchOnlyDemo(tk.Tk):
         reverse = not bool(current.get('reverse')) if current.get('column') == column else False
         self.router_status_sort[rid] = {'column': column, 'reverse': reverse}
         self._refresh_router_logs(router)
+
+    def _status_filter_key(self, st):
+        mode = str((st or {}).get('mode') or '').lower()
+        status = str((st or {}).get('status') or '')
+        if mode == 'error' or status.startswith('ERROR'):
+            return 'error'
+        if mode == 'ok' or status in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status:
+            return 'ok'
+        if mode in ('wait', 'idle'):
+            return 'wait'
+        return 'running'
 
     def _status_state_text(self, st):
         mode = str((st or {}).get('mode') or '').lower()
@@ -1622,7 +1641,14 @@ class XXTouchOnlyDemo(tk.Tk):
             sort_col = sort_state.get('column') or 'machine'
             reverse = bool(sort_state.get('reverse'))
             prepared.sort(key=lambda item: self._status_sort_value(item[1], sort_col), reverse=reverse)
+            filters = self.router_status_filters.get(id(router), {})
             for machine, st in prepared:
+                filter_key = self._status_filter_key(st)
+                show = bool(filters.get(filter_key).get()) if filters.get(filter_key) is not None else True
+                if not show:
+                    if machine in existing:
+                        widget.delete(machine)
+                    continue
                 timer = st.get('_timer_text', '')
                 values = (st.get('time', ''), machine, st.get('task', ''), st.get('status', ''), self._status_state_text(st))
                 tag = st.get('mode') or 'idle'
