@@ -1353,16 +1353,20 @@ class XXTouchOnlyDemo(tk.Tk):
         wrap.rowconfigure(0, weight=1)
         wrap.columnconfigure(0, weight=1)
 
-        result_head = ttk.Frame(right_panel, style='Card.TFrame')
-        result_head.pack(fill='x', pady=(0, 4))
-        ttk.Label(result_head, text='KẾT QUẢ TÁC VỤ PYW', style='Title.TLabel').pack(side='left')
-        result_box = tk.Text(right_panel, height=20, bg='#020617', fg='#e5e7eb', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
-        result_box.pack(fill='both', expand=True)
-        result_box.tag_configure('summary', foreground='#93c5fd')
-        result_box.tag_configure('ok', foreground='#22c55e')
-        result_box.tag_configure('error', foreground='#fb7185')
-        result_box.config(state='disabled')
-        self.router_mini_log_widgets[id(router)] = result_box
+        result_top = ttk.Frame(right_panel, style='Card.TFrame')
+        result_top.pack(fill='both', expand=True, pady=(0, 8))
+        ttk.Label(result_top, text='MÁY LỖI', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
+        err_box = tk.Text(result_top, height=10, bg='#020617', fg='#fb7185', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        err_box.pack(fill='both', expand=True)
+        err_box.config(state='disabled')
+
+        result_bottom = ttk.Frame(right_panel, style='Card.TFrame')
+        result_bottom.pack(fill='both', expand=True)
+        ttk.Label(result_bottom, text='MÁY CHẠY XONG', style='Title.TLabel').pack(anchor='w', pady=(0, 4))
+        ok_box = tk.Text(result_bottom, height=10, bg='#020617', fg='#22c55e', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        ok_box.pack(fill='both', expand=True)
+        ok_box.config(state='disabled')
+        self.router_mini_log_widgets[id(router)] = {'error': err_box, 'ok': ok_box}
         self.router_logs_widgets[id(router)] = tree
         self.router_status_widgets[id(router)] = tree
         self._refresh_router_logs(router)
@@ -1370,15 +1374,16 @@ class XXTouchOnlyDemo(tk.Tk):
         self._refresh_router_status_tick(router)
 
     def _refresh_router_mini_log(self, router):
-        widget = self.router_mini_log_widgets.get(id(router))
-        if widget is None:
+        widgets = self.router_mini_log_widgets.get(id(router))
+        if widgets is None:
             return
         try:
+            err_widget = widgets.get('error') if isinstance(widgets, dict) else widgets
+            ok_widget = widgets.get('ok') if isinstance(widgets, dict) else None
             rows = list(router.get('rows', []) or [])
             states = router.get('_machine_status', {}) or {}
             ok_rows = []
             err_rows = []
-            running = 0
             for row in rows:
                 machine = str(row.get('machine', '?')).strip() or '?'
                 st = states.get(machine) or {}
@@ -1389,26 +1394,26 @@ class XXTouchOnlyDemo(tk.Tk):
                     err_rows.append((self._machine_sort_key(machine), f'[{machine}] {task}: {self._clean_status_text(status)}'))
                 elif key == 'ok' or row.get('network') == 'OK':
                     ok_rows.append((self._machine_sort_key(machine), f'[{machine}] {task}: {self._clean_status_text(status or "OK")}'))
-                elif key == 'running':
-                    running += 1
             ok_rows.sort(key=lambda x: x[0])
             err_rows.sort(key=lambda x: x[0])
-            widget.config(state='normal')
-            widget.delete('1.0', 'end')
-            widget.insert('end', f'Tổng kết: lỗi {len(err_rows)} | chạy xong {len(ok_rows)} | đang chạy {running}\n\n', 'summary')
-            widget.insert('end', 'LỖI:\n', 'error')
-            if err_rows:
-                for _, line in err_rows:
-                    widget.insert('end', line + '\n', 'error')
-            else:
-                widget.insert('end', '(không có)\n', 'summary')
-            widget.insert('end', '\nCHẠY XONG:\n', 'ok')
-            if ok_rows:
-                for _, line in ok_rows:
-                    widget.insert('end', line + '\n', 'ok')
-            else:
-                widget.insert('end', '(chưa có)\n', 'summary')
-            widget.config(state='disabled')
+            if err_widget is not None:
+                err_widget.config(state='normal')
+                err_widget.delete('1.0', 'end')
+                if err_rows:
+                    for _, line in err_rows:
+                        err_widget.insert('end', line + '\n')
+                else:
+                    err_widget.insert('end', '(không có lỗi)\n')
+                err_widget.config(state='disabled')
+            if ok_widget is not None:
+                ok_widget.config(state='normal')
+                ok_widget.delete('1.0', 'end')
+                if ok_rows:
+                    for _, line in ok_rows:
+                        ok_widget.insert('end', line + '\n')
+                else:
+                    ok_widget.insert('end', '(chưa có máy chạy xong)\n')
+                ok_widget.config(state='disabled')
         except Exception:
             pass
 
