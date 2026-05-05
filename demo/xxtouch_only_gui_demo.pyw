@@ -1407,8 +1407,13 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(ok_head, text='MÁY CHẠY XONG', style='Title.TLabel').pack(side='left')
         ok_count_label = ttk.Label(ok_head, text='Tổng: 0 máy thành công', style='Sub.TLabel')
         ok_count_label.pack(side='left', padx=(12, 0))
-        ok_box = tk.Text(result_top, height=10, bg='#020617', fg='#22c55e', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
-        ok_box.pack(fill='both', expand=True)
+        ok_wrap = ttk.Frame(result_top, style='Card.TFrame')
+        ok_wrap.pack(fill='both', expand=True)
+        ok_box = tk.Text(ok_wrap, height=10, bg='#020617', fg='#22c55e', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        ok_scroll = ttk.Scrollbar(ok_wrap, orient='vertical', command=ok_box.yview)
+        ok_box.configure(yscrollcommand=ok_scroll.set)
+        ok_box.pack(side='left', fill='both', expand=True)
+        ok_scroll.pack(side='right', fill='y')
         ok_box.config(state='disabled')
 
         result_bottom = ttk.Frame(right_panel, style='Card.TFrame')
@@ -1418,8 +1423,13 @@ class XXTouchOnlyDemo(tk.Tk):
         ttk.Label(err_head, text='MÁY LỖI', style='Title.TLabel').pack(side='left')
         err_count_label = ttk.Label(err_head, text='Tổng: 0 máy lỗi', style='Sub.TLabel')
         err_count_label.pack(side='left', padx=(12, 0))
-        err_box = tk.Text(result_bottom, height=10, bg='#020617', fg='#fb7185', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
-        err_box.pack(fill='both', expand=True)
+        err_wrap = ttk.Frame(result_bottom, style='Card.TFrame')
+        err_wrap.pack(fill='both', expand=True)
+        err_box = tk.Text(err_wrap, height=10, bg='#020617', fg='#fb7185', insertbackground='#ffffff', wrap='word', font=('Consolas', 10), relief='flat')
+        err_scroll = ttk.Scrollbar(err_wrap, orient='vertical', command=err_box.yview)
+        err_box.configure(yscrollcommand=err_scroll.set)
+        err_box.pack(side='left', fill='both', expand=True)
+        err_scroll.pack(side='right', fill='y')
         err_box.config(state='disabled')
         self.router_mini_log_widgets[id(router)] = {'error': err_box, 'ok': ok_box}
         self.router_pyw_result_labels[id(router)] = {'error': err_count_label, 'ok': ok_count_label}
@@ -2836,7 +2846,7 @@ class XXTouchOnlyDemo(tk.Tk):
     def _open_more_popup(self, router):
         win = tk.Toplevel(self)
         win.title(f'More - {router.get("name", "")}')
-        win.geometry('360x280')
+        win.geometry('360x330')
         win.resizable(False, False)
         win.configure(bg='#111827')
         try:
@@ -2849,11 +2859,11 @@ class XXTouchOnlyDemo(tk.Tk):
         body.pack(fill='both', expand=True)
         ttk.Label(body, text='Chức năng mở rộng', style='Title.TLabel').pack(anchor='w', pady=(0, 8))
         ttk.Label(body, text='Các nút phụ được gom vào đây để giao diện chính gọn hơn', style='Sub.TLabel').pack(anchor='w', pady=(0, 14))
-        ttk.Button(body, text='SCAN', command=lambda: (win.destroy(), self._run_background(router, self._scan_router))).pack(anchor='w', pady=2)
-        ttk.Button(body, text='REBOOT', command=lambda: (win.destroy(), self._run_background(router, lambda rr: self._simple_router_action(rr, 'reboot2', 'Đã gửi lệnh reboot', ignore_random=True)))).pack(anchor='w', pady=2)
-        ttk.Button(body, text='TXT', command=lambda: (win.destroy(), self._open_txt_lines_popup(router))).pack(anchor='w', pady=2)
-        ttk.Button(body, text='Select Script', command=lambda: (win.destroy(), self._open_select_script_popup(router))).pack(anchor='w', pady=2)
-        ttk.Button(body, text='Đóng', command=win.destroy).pack(side='right', pady=(18, 0))
+        ttk.Button(body, text='SCAN', width=16, command=lambda: (win.destroy(), self._run_background(router, self._scan_router))).pack(anchor='w', fill='x', pady=3)
+        ttk.Button(body, text='REBOOT', width=16, command=lambda: (win.destroy(), self._run_background(router, lambda rr: self._simple_router_action(rr, 'reboot2', 'Đã gửi lệnh reboot', ignore_random=True)))).pack(anchor='w', fill='x', pady=3)
+        ttk.Button(body, text='TXT', width=16, command=lambda: (win.destroy(), self._open_txt_lines_popup(router))).pack(anchor='w', fill='x', pady=3)
+        ttk.Button(body, text='Select Script', width=16, command=lambda: (win.destroy(), self._open_select_script_popup(router))).pack(anchor='w', fill='x', pady=3)
+        ttk.Button(body, text='Đóng', width=12, command=win.destroy).pack(anchor='e', pady=(18, 0))
 
     def _open_select_script_popup(self, router):
         rows = list(self._selected_rows(router))
@@ -2863,7 +2873,7 @@ class XXTouchOnlyDemo(tk.Tk):
 
         win = tk.Toplevel(self)
         win.title(f'Select Script - {router.get("name", "")}')
-        win.geometry('620x230')
+        win.geometry('700x280')
         win.resizable(False, False)
         win.configure(bg='#111827')
         try:
@@ -2919,8 +2929,8 @@ class XXTouchOnlyDemo(tk.Tk):
 
         actions = ttk.Frame(body, style='Card.TFrame')
         actions.pack(fill='x', pady=(18, 0))
-        ttk.Button(actions, text='Set Select Script', command=do_apply).pack(side='right')
-        ttk.Button(actions, text='Hủy', command=win.destroy).pack(side='right', padx=(0, 8))
+        ttk.Button(actions, text='Set Select Script', width=18, command=do_apply).pack(side='right')
+        ttk.Button(actions, text='Hủy', width=12, command=win.destroy).pack(side='right', padx=(0, 8))
 
     def _open_remote_panel(self, router):
         machines = router.get('rows', [])
@@ -3784,6 +3794,8 @@ end
         ttk.Label(wrap, text='Dán danh sách nhiều dòng. SEND TXT sẽ cấp mỗi máy 1 dòng và ghi vào lua/examples/input.txt trên từng máy.', style='Sub.TLabel').pack(anchor='w', pady=(0, 10))
 
         counter_var = tk.StringVar()
+        btn_row = ttk.Frame(wrap, style='Card.TFrame')
+        btn_row.pack(fill='x', pady=(0, 10))
         columns = ('stt', 'line')
         tree_wrap = ttk.Frame(wrap, style='Card.TFrame')
         tree_wrap.pack(fill='both', expand=True)
@@ -3931,8 +3943,6 @@ end
                 self.after(0, lambda: self._append_router_log(router, f'SEND TXT: đã gửi {success} dòng, lỗi {failed}, còn lại {len(self.txt_pool)} dòng'))
             threading.Thread(target=worker, daemon=True).start()
 
-        btn_row = ttk.Frame(wrap, style='Card.TFrame')
-        btn_row.pack(fill='x', pady=(8, 0))
         ttk.Button(btn_row, text='Thêm danh sách', command=add_lines).pack(side='left')
         ttk.Button(btn_row, text='Sửa dòng chọn', command=edit_selected).pack(side='left', padx=(8, 0))
         ttk.Button(btn_row, text='Áp dụng sửa', command=apply_edit).pack(side='left', padx=(8, 0))
