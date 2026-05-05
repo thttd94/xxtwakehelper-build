@@ -348,6 +348,7 @@ class XXTouchOnlyDemo(tk.Tk):
         self.remote_context = {'router': None, 'machines': [], 'index': 0, 'token': 0}
         self.group3_schedule_jobs = {}
         self.group3_schedule_tree = None
+        self.router_random_cancel_tokens = {}
         self.inline_title_var = None
         self.inline_snippet_var = None
         self.inline_snippet_combo = None
@@ -1313,6 +1314,8 @@ class XXTouchOnlyDemo(tk.Tk):
         head.pack(fill='x', pady=(0, 8))
         ttk.Label(head, text='STATUS THEO MÁY', style='Title.TLabel').pack(side='left')
         ttk.Button(head, text='Mở file log', command=lambda: self._open_log_file()).pack(side='right')
+        ttk.Button(head, text='RE-ACTION', command=lambda r=router: self._run_background_confirm_random(r, self._rerun_last_failed_action_for_router)).pack(side='right', padx=(0, 8))
+        ttk.Button(head, text='STOP SCRIPT', command=lambda r=router: self._run_background(r, self._stop_scripts_for_router)).pack(side='right', padx=(0, 8))
         filter_frame = ttk.Frame(card, style='Card.TFrame')
         filter_frame.pack(fill='x', pady=(0, 8))
         self.router_status_filters[id(router)] = {}
@@ -3227,6 +3230,10 @@ class XXTouchOnlyDemo(tk.Tk):
         self._record_machine_list_history(router, action_name)
         random_enabled = (not ignore_random) and self._random_start_enabled(router)
         random_seconds = self._random_start_seconds(router)
+        random_token = None
+        if random_enabled:
+            random_token = object()
+            self.router_random_cancel_tokens[id(router)] = random_token
         if random_enabled:
             self._save_random_start_settings(router)
             self._append_router_log(router, f'{action_name}: Random Start bật, rải {len(rows)} máy trong {max(1, int(round(random_seconds / 60)))} phút')
@@ -3242,7 +3249,15 @@ class XXTouchOnlyDemo(tk.Tk):
                 self._set_machine_status(router, row, action_name, row['note'], mode='wait', countdown=int(delay_seconds), started_at=task_started)
                 self._schedule_router_devices_refresh(router)
                 self.after(0, lambda m=machine, d=int(delay_seconds): self._append_router_log(router, f'[{m}] {action_name}: Random Start chờ {d}s'))
-                time.sleep(max(0, float(delay_seconds)))
+                end_wait = time.time() + max(0, float(delay_seconds))
+                while time.time() < end_wait:
+                    if self.router_random_cancel_tokens.get(id(router)) is not random_token:
+                        row['network'] = 'Đã hủy Random'
+                        row['note'] = 'Random Start đã bị STOP'
+                        row['updated'] = now_text()
+                        self._set_machine_status(router, row, action_name, row['note'], mode='wait', started_at=task_started)
+                        raise XXTouchOpenAPIError('Random Start đã bị STOP')
+                    time.sleep(min(1.0, max(0, end_wait - time.time())))
             row['note'] = f'{action_name}: đang chạy'
             row['updated'] = now_text()
             self._set_machine_status(router, row, action_name, 'Đang chạy', mode='running', started_at=time.time())
@@ -3316,7 +3331,10 @@ class XXTouchOnlyDemo(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def _stop_scripts_for_router(self, router):
+        # STOP SCRIPT phải dừng cả script trên máy và các thread Random Start đang chờ trong PYW.
+        self.router_random_cancel_tokens[id(router)] = object()
         rows = self._selected_rows(router)
+        self._append_router_log(router, 'STOP SCRIPT: đã hủy toàn bộ Random Start đang chờ trong PYW')
 
         def task(row):
             ip = str(row.get('ip') or '').strip()
