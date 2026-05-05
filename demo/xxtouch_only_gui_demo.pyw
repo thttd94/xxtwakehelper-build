@@ -1570,6 +1570,8 @@ class XXTouchOnlyDemo(tk.Tk):
         status = str((st or {}).get('status') or '')
         if mode == 'error' or status.startswith('ERROR'):
             return 'error'
+        if status in ('STOPPED_BY_PYW', 'Đã dừng'):
+            return 'ok'
         if mode == 'ok' or status in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status:
             return 'ok'
         if mode in ('wait', 'idle'):
@@ -1581,6 +1583,8 @@ class XXTouchOnlyDemo(tk.Tk):
         status = str((st or {}).get('status') or '')
         if mode == 'error' or status.startswith('ERROR'):
             return 'Lỗi'
+        if status in ('STOPPED_BY_PYW', 'Đã dừng'):
+            return 'Đã dừng'
         if mode == 'ok' or status in ('FINISHED_OK', 'ALL DONE') or 'ALL DONE' in status:
             return 'Chạy xong'
         if mode == 'wait':
@@ -3353,8 +3357,18 @@ class XXTouchOnlyDemo(tk.Tk):
                     time.sleep(0.5)
             if not ok:
                 raise last_err or XXTouchOpenAPIError('STOP SCRIPT thất bại')
+            marker = f'{int(time.time())}|STOPPED_BY_PYW'
+            for path in [
+                '/var/mobile/Media/1ferver/lua/examples/oc_status.txt',
+                f'/var/mobile/Media/1ferver/lua/examples/oc_status_{row.get("machine", "?")}.txt',
+            ]:
+                try:
+                    client.write_file(path, marker.encode('utf-8'))
+                except Exception:
+                    pass
             row['network'] = 'Online'
             row['xxtouch'] = 'Connected'
+            row['note'] = 'Đã dừng'
             row['updated'] = now_text()
             return row
 
