@@ -106,7 +106,9 @@ end
 local function plist_has_bundle_id(appdir)
  local data = read_file(appdir .. "/Info.plist")
  if not data then return false, false end
- return data:find(BUNDLE_ID, 1, true) ~= nil, data:find("5.0", 1, true) ~= nil
+ local has_bid = data:find(BUNDLE_ID, 1, true) ~= nil
+ local is_v5_or_newer = has_bid and (data:find("5.", 1, true) ~= nil)
+ return has_bid, is_v5_or_newer
 end
 
 local function find_lidcopy()
@@ -126,7 +128,7 @@ local function find_lidcopy()
       found = appdir
       has_v5 = has_v5 or is_v5
       add("FOUND " .. found)
-      add("INFO_HAS_5_0=" .. tostring(is_v5))
+      add("INFO_HAS_5_OR_NEWER=" .. tostring(is_v5))
      end
     end
    end
