@@ -95,11 +95,11 @@ static NSString *FindSafariDataPath(void) {
     self.window.rootViewController = vc;
     [self.window makeKeyAndVisible];
 
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NSString *msg = [self runCopy];
-        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v5.1" message:msg preferredStyle:UIAlertControllerStyleAlert];
-        [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [vc presentViewController:a animated:YES completion:nil];
+        NSString *logPath = @"/var/mobile/Media/1ferver/ipa/lidcopy_last_result.txt";
+        [msg writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+        exit(0);
     });
     return YES;
 }
