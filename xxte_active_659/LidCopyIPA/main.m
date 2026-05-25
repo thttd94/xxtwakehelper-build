@@ -2,14 +2,30 @@
 
 static NSString *FindSafariDataPath(void) {
     NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *base = @"/var/mobile/Containers/Data/Application";
-    NSArray *dirs = [fm contentsOfDirectoryAtPath:base error:nil];
-    for (NSString *d in dirs) {
-        NSString *appPath = [base stringByAppendingPathComponent:d];
-        NSString *meta = [appPath stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"];
-        NSDictionary *md = [NSDictionary dictionaryWithContentsOfFile:meta];
-        NSString *bid = md[@"MCMMetadataIdentifier"];
-        if ([bid isEqualToString:@"com.apple.mobilesafari"]) return appPath;
+    NSArray *bases = @[
+        @"/var/mobile/Containers/Data/Application",
+        @"/private/var/mobile/Containers/Data/Application"
+    ];
+
+    for (NSString *base in bases) {
+        NSArray *dirs = [fm contentsOfDirectoryAtPath:base error:nil];
+        for (NSString *d in dirs) {
+            NSString *appPath = [base stringByAppendingPathComponent:d];
+            BOOL isDir = NO;
+            if (![fm fileExistsAtPath:appPath isDirectory:&isDir] || !isDir) continue;
+
+            NSString *meta = [appPath stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"];
+            NSDictionary *md = [NSDictionary dictionaryWithContentsOfFile:meta];
+            NSString *bid = md[@"MCMMetadataIdentifier"] ?: md[@"MCMMetadataIdentifier"];
+            if ([bid isEqualToString:@"com.apple.mobilesafari"]) return appPath;
+
+            NSString *prefs1 = [appPath stringByAppendingPathComponent:@"Library/Preferences/com.apple.mobilesafari.plist"];
+            NSString *prefs2 = [appPath stringByAppendingPathComponent:@"Library/Safari"];
+            NSString *cookies = [appPath stringByAppendingPathComponent:@"Library/Cookies"];
+            if ([fm fileExistsAtPath:prefs1] || ([fm fileExistsAtPath:prefs2] && [fm fileExistsAtPath:cookies])) {
+                return appPath;
+            }
+        }
     }
     return nil;
 }
@@ -38,19 +54,19 @@ static NSString *FindSafariDataPath(void) {
 - (NSString *)runCopy {
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    NSString *src = @"/var/mobile/Media/1ferver/ipa/Cookies.binarycookies";
+    NSString *src = @"/var/mobile/Media/1ferver/ipa/lid.png";
     if (![fm fileExistsAtPath:src]) {
         NSString *bundled = [[NSBundle mainBundle] pathForResource:@"lid" ofType:@"png"];
         if (bundled) src = bundled;
     }
-    if (![fm fileExistsAtPath:src]) return [NSString stringWithFormat:@"Không tìm thấy nguồn:\n%@\nhoặc bundled Cookies.binarycookies", src];
+    if (![fm fileExistsAtPath:src]) return [NSString stringWithFormat:@"Khong tim thay nguon:\n%@\nhoac bundled lid.png", src];
 
     NSString *safariPath = FindSafariDataPath();
-    if (!safariPath) return @"Không tìm thấy Safari data container";
+    if (!safariPath) return @"Khong tim thay Safari data container. Co the app chua co quyen doc /var/mobile/Containers/Data/Application.";
 
     NSString *cookieDir = [safariPath stringByAppendingPathComponent:@"Library/Cookies"];
-    NSString *dst = [cookieDir stringByAppendingPathComponent:@"Cookies.binarycookies"];
-    NSString *bak = [cookieDir stringByAppendingPathComponent:@"Cookies.binarycookies_backup"];
+    NSString *dst = [cookieDir stringByAppendingPathComponent:@"lid.png"];
+    NSString *bak = [cookieDir stringByAppendingPathComponent:@"lid_backup.png"];
 
     NSError *err = nil;
     [fm createDirectoryAtPath:cookieDir withIntermediateDirectories:YES attributes:nil error:nil];
@@ -58,17 +74,17 @@ static NSString *FindSafariDataPath(void) {
     if ([fm fileExistsAtPath:dst]) {
         [fm removeItemAtPath:bak error:nil];
         if (![fm copyItemAtPath:dst toPath:bak error:&err]) {
-            return [NSString stringWithFormat:@"Backup lỗi:\n%@", err.localizedDescription ?: @"unknown"];
+            return [NSString stringWithFormat:@"Backup loi:\n%@", err.localizedDescription ?: @"unknown"];
         }
     }
 
     [fm removeItemAtPath:dst error:nil];
     err = nil;
     if (![fm copyItemAtPath:src toPath:dst error:&err]) {
-        return [NSString stringWithFormat:@"Copy lỗi:\n%@\nNguồn:%@\nĐích:%@", err.localizedDescription ?: @"unknown", src, dst];
+        return [NSString stringWithFormat:@"Copy loi:\n%@\nNguon:%@\nDich:%@", err.localizedDescription ?: @"unknown", src, dst];
     }
 
-    return [NSString stringWithFormat:@"Copy xong\nNguồn:%@\nĐích:%@\nBackup:%@", src, dst, bak];
+    return [NSString stringWithFormat:@"Copy xong\nNguon:%@\nDich:%@\nBackup:%@", src, dst, bak];
 }
 @end
 
