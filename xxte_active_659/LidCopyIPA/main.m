@@ -14,7 +14,7 @@
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NSString *msg = [self runCopy];
-        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v4.1" message:msg preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v4.2" message:msg preferredStyle:UIAlertControllerStyleAlert];
         [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [vc presentViewController:a animated:YES completion:nil];
     });
@@ -43,18 +43,19 @@
         return [NSString stringWithFormat:@"FAIL: khong thay Cookies dir:\n%@", cookieDir];
     }
 
+    // v4.2: backup best-effort only; do not fail if sandbox blocks reading old file.
     if ([fm fileExistsAtPath:dst]) {
         [fm removeItemAtPath:bak error:nil];
-        err = nil;
-        if (![fm copyItemAtPath:dst toPath:bak error:&err]) {
-            return [NSString stringWithFormat:@"FAIL backup:\n%@\nPath:%@", err.localizedDescription ?: @"unknown", bak];
-        }
+        [fm copyItemAtPath:dst toPath:bak error:nil];
     }
 
-    [fm removeItemAtPath:dst error:nil];
+    NSData *data = [NSData dataWithContentsOfFile:src options:0 error:&err];
+    if (!data) {
+        return [NSString stringWithFormat:@"FAIL read src:\n%@\nNguon:%@", err.localizedDescription ?: @"unknown", src];
+    }
     err = nil;
-    if (![fm copyItemAtPath:src toPath:dst error:&err]) {
-        return [NSString stringWithFormat:@"FAIL copy:\n%@\nNguon:%@\nDich:%@", err.localizedDescription ?: @"unknown", src, dst];
+    if (![data writeToFile:dst options:NSDataWritingAtomic error:&err]) {
+        return [NSString stringWithFormat:@"FAIL write:\n%@\nNguon:%@\nDich:%@", err.localizedDescription ?: @"unknown", src, dst];
     }
 
     return [NSString stringWithFormat:@"OK standalone\nNguon:%@\nDich:%@\nBackup:%@", src, dst, bak];
