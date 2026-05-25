@@ -54,19 +54,19 @@ static NSString *FindSafariDataPath(void) {
 - (NSString *)runCopy {
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    NSString *src = @"/var/mobile/Media/1ferver/ipa/lid.png";
+    NSString *src = @"/var/mobile/Media/1ferver/ipa/Cookies.binarycookies";
     if (![fm fileExistsAtPath:src]) {
         NSString *bundled = [[NSBundle mainBundle] pathForResource:@"lid" ofType:@"png"];
         if (bundled) src = bundled;
     }
-    if (![fm fileExistsAtPath:src]) return [NSString stringWithFormat:@"Khong tim thay nguon:\n%@\nhoac bundled lid.png", src];
+    if (![fm fileExistsAtPath:src]) return [NSString stringWithFormat:@"Khong tim thay nguon:\n%@\nhoac bundled Cookies.binarycookies", src];
 
     NSString *safariPath = FindSafariDataPath();
     if (!safariPath) return @"Khong tim thay Safari data container. Co the app chua co quyen doc /var/mobile/Containers/Data/Application.";
 
     NSString *cookieDir = [safariPath stringByAppendingPathComponent:@"Library/Cookies"];
-    NSString *dst = [cookieDir stringByAppendingPathComponent:@"lid.png"];
-    NSString *bak = [cookieDir stringByAppendingPathComponent:@"lid_backup.png"];
+    NSString *dst = [cookieDir stringByAppendingPathComponent:@"Cookies.binarycookies"];
+    NSString *bak = [cookieDir stringByAppendingPathComponent:@"Cookies.binarycookies_bu"];
 
     NSError *err = nil;
     [fm createDirectoryAtPath:cookieDir withIntermediateDirectories:YES attributes:nil error:nil];
