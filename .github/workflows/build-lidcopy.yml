@@ -1,0 +1,29 @@
+name: Build LidCopy IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'xxte_active_659/LidCopyIPA/**'
+      - '.github/workflows/build-lidcopy.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Theos
+        run: |
+          brew install ldid xz
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+      - name: Build app
+        run: |
+          export THEOS=~/theos
+          cd xxte_active_659/LidCopyIPA
+          chmod +x build_on_mac.sh package_ipa.sh
+          ./build_on_mac.sh
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: LidCopy-ipa
+          path: xxte_active_659/LidCopyIPA/LidCopy.ipa
