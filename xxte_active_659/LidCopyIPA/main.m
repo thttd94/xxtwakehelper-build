@@ -14,7 +14,7 @@
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NSString *msg = [self runCopy];
-        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v4.2" message:msg preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v5.0" message:msg preferredStyle:UIAlertControllerStyleAlert];
         [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [vc presentViewController:a animated:YES completion:nil];
     });
