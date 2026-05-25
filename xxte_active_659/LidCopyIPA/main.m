@@ -60,7 +60,30 @@ static NSString *FindSafariDataPathViaMCM(void) {
     return nil;
 }
 
+static NSString *ConfiguredSafariPath(void) {
+    NSArray *paths = @[
+        @"/var/mobile/Media/1ferver/ipa/safari_path.txt",
+        @"/private/var/mobile/Media/1ferver/ipa/safari_path.txt"
+    ];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    for (NSString *p in paths) {
+        if ([fm fileExistsAtPath:p]) {
+            NSError *err = nil;
+            NSString *raw = [NSString stringWithContentsOfFile:p encoding:NSUTF8StringEncoding error:&err];
+            NSString *v = [raw stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            Diag(@"config %@: %@ err:%@", p, v.length ? v : @"empty", err.localizedDescription ?: @"none");
+            if (v.length > 0) return v;
+        } else {
+            Diag(@"config missing: %@", p);
+        }
+    }
+    return nil;
+}
+
 static NSString *FindSafariDataPath(void) {
+    NSString *cfg = ConfiguredSafariPath();
+    if (cfg.length > 0) return cfg;
+
     NSString *mcm = FindSafariDataPathViaMCM();
     if (mcm.length > 0) return mcm;
 
@@ -110,7 +133,7 @@ static NSString *FindSafariDataPath(void) {
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NSString *msg = [self runCopy];
-        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v2.2" message:msg preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Lid Copy v2.3" message:msg preferredStyle:UIAlertControllerStyleAlert];
         [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [vc presentViewController:a animated:YES completion:nil];
     });
