@@ -9,6 +9,9 @@ rm -rf Payload LidCopy.ipa
 mkdir -p Payload
 cp -R "$APP_PATH" Payload/LidCopy.app
 cp -f Info.plist Payload/LidCopy.app/Info.plist
+for icon in Icon*.png; do
+  [ -f "$icon" ] && cp -f "$icon" Payload/LidCopy.app/
+done
 if [ -f lid.png ]; then cp -f lid.png Payload/LidCopy.app/lid.png; fi
 if [ ! -f Payload/LidCopy.app/LidCopy ]; then
   FOUND="$(find Payload/LidCopy.app -maxdepth 1 -type f -perm +111 2>/dev/null | head -n 1 || true)"
