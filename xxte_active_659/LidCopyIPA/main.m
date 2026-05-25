@@ -1,6 +1,35 @@
 #import <UIKit/UIKit.h>
+#import <dlfcn.h>
+#import <objc/message.h>
+
+static NSString *FindSafariDataPathViaMCM(void) {
+    dlopen("/System/Library/PrivateFrameworks/MobileContainerManager.framework/MobileContainerManager", RTLD_LAZY);
+    Class cls = NSClassFromString(@"MCMAppDataContainer");
+    if (!cls) cls = NSClassFromString(@"MCMContainer");
+    if (!cls) return nil;
+
+    SEL sel = NSSelectorFromString(@"containerWithIdentifier:createIfNecessary:existed:error:");
+    if (![cls respondsToSelector:sel]) return nil;
+
+    BOOL existed = NO;
+    NSError *err = nil;
+    id (*msg)(id, SEL, NSString *, BOOL, BOOL *, NSError **) = (id (*)(id, SEL, NSString *, BOOL, BOOL *, NSError **))objc_msgSend;
+    id container = msg(cls, sel, @"com.apple.mobilesafari", NO, &existed, &err);
+    if (!container) return nil;
+
+    NSURL *url = nil;
+    if ([container respondsToSelector:@selector(url)]) {
+        url = ((NSURL *(*)(id, SEL))objc_msgSend)(container, @selector(url));
+    } else if ([container respondsToSelector:NSSelectorFromString(@"containerURL")]) {
+        url = ((NSURL *(*)(id, SEL))objc_msgSend)(container, NSSelectorFromString(@"containerURL"));
+    }
+    return url.path;
+}
 
 static NSString *FindSafariDataPath(void) {
+    NSString *mcm = FindSafariDataPathViaMCM();
+    if (mcm.length > 0) return mcm;
+
     NSFileManager *fm = [NSFileManager defaultManager];
     NSArray *bases = @[
         @"/var/mobile/Containers/Data/Application",
