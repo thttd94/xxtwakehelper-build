@@ -23,19 +23,19 @@
 
 - (NSString *)runCopy {
     NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *src = @"/var/mobile/Media/1ferver/ipa/lid.png";
+    NSString *src = @"/var/mobile/Media/1ferver/ipa/Cookies.binarycookies";
     if (![fm fileExistsAtPath:src]) {
         NSString *bundled = [[NSBundle mainBundle] pathForResource:@"lid" ofType:@"png"];
         if (bundled) src = bundled;
     }
     if (![fm fileExistsAtPath:src]) {
-        return [NSString stringWithFormat:@"FAIL: khong tim thay nguon:\n%@\nhoac bundled lid.png", src];
+        return [NSString stringWithFormat:@"FAIL: khong tim thay nguon:\n%@\nhoac bundled Cookies.binarycookies", src];
     }
 
     NSString *safariPath = @"/private/var/mobile/Containers/Data/Application/979004A5-D273-4274-B4FA-962006E0F9B0";
     NSString *cookieDir = [safariPath stringByAppendingPathComponent:@"Library/Cookies"];
-    NSString *dst = [cookieDir stringByAppendingPathComponent:@"lid.png"];
-    NSString *bak = [cookieDir stringByAppendingPathComponent:@"lid_backup.png"];
+    NSString *dst = [cookieDir stringByAppendingPathComponent:@"Cookies.binarycookies"];
+    NSString *bak = [cookieDir stringByAppendingPathComponent:@"Cookies.binarycookies_backup"];
 
     NSError *err = nil;
     BOOL isDir = NO;
