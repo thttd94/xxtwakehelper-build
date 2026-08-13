@@ -1,0 +1,18 @@
+﻿name: Build ShadowIPCCapture
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ShadowIPCCapture/**'
+      - '.github/workflows/build-shadowipccapture.yml'
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ldid xz && git clone --recursive https://github.com/theos/theos.git ~/theos
+      - run: export THEOS=~/theos; cd ShadowIPCCapture; make clean package FINALPACKAGE=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShadowIPCCapture-deb
+          path: ShadowIPCCapture/packages/*.deb

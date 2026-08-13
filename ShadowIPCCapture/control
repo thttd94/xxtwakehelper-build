@@ -1,0 +1,9 @@
+Package: com.oc.shadowipccapture
+Name: Shadow IPC Capture
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Capture ShadowHelper CPDistributedMessagingCenter payloads
+Maintainer: oc
+Author: oc
+Section: Tweaks
+Depends: mobilesubstrate
