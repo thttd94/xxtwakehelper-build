@@ -45,7 +45,7 @@ static NSDictionary *Collect(void) {
  NSMutableDictionary *r=[@{@"schema":@2,@"receiver_available":@YES,@"framework_loaded":@NO,
   @"proxy_type_valid":@NO,@"identifier_match":@NO} mutableCopy];
  for(NSString *p in @[@"lookup",@"identifier",@"bundle",@"data",@"groups"])SetResult(r,p,0,NO,nil,Nil);
- r[@"framework_loaded"]=@(dlopen("/System/Library/Frameworks/MobileCoreServices.framework/MobileCoreServices",RTLD_LAZY|RTLD_LOCAL)!=NULL);
+ r[@"framework_loaded"]=@((BOOL)(dlopen("/System/Library/Frameworks/MobileCoreServices.framework/MobileCoreServices",RTLD_LAZY|RTLD_LOCAL)!=NULL));
  Class cls=NSClassFromString(@"LSApplicationProxy");
  id proxy=Query(cls,@"applicationProxyForIdentifier:",@"com.ss.iphone.ugc.Ame",YES,cls,@"lookup",r);
  BOOL valid=proxy && cls && [proxy isKindOfClass:cls];r[@"proxy_type_valid"]=@(valid);
