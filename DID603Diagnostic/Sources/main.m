@@ -12,9 +12,9 @@ static void SetResult(NSMutableDictionary *r, NSString *p, NSUInteger outcome,
    [value isKindOfClass:NSDictionary.class] ? 2 : [value isKindOfClass:NSString.class] ? 3 : 4;
  r[[p stringByAppendingString:@"_outcome"]]=@(outcome);
  r[[p stringByAppendingString:@"_signature_valid"]]=@(signature);
- r[[p stringByAppendingString:@"_value_present"]]=@(value!=nil);
+ r[[p stringByAppendingString:@"_value_present"]]=@((BOOL)(value!=nil));
  r[[p stringByAppendingString:@"_value_type"]]=@(type);
- r[[p stringByAppendingString:@"_expected_type"]]=@(value && expected && [value isKindOfClass:expected]);
+ r[[p stringByAppendingString:@"_expected_type"]]=@((BOOL)(value && expected && [value isKindOfClass:expected]));
  r[[p stringByAppendingString:@"_error_api_supported"]]=@NO;
 }
 static BOOL Encoding(const char *t,char expected) {
