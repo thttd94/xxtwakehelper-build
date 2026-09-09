@@ -1,0 +1,22 @@
+name: Build DID603 ReadOnly Diagnostic
+on:
+  workflow_dispatch:
+  push:
+    branches: ['diagnostic603-readonly-20260909']
+    paths: ['DID603Diagnostic/**', '.github/workflows/build-did603diagnostic.yml']
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ldid xz && git clone --recursive https://github.com/theos/theos.git ~/theos
+      - run: export THEOS=~/theos; cd DID603Diagnostic; chmod +x build.sh; ./build.sh
+      - run: git rev-parse HEAD > DID603Diagnostic/commit.txt; shasum -a 256 DID603Diagnostic/Sources/main.m > DID603Diagnostic/source.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DID603Diagnostic-ipa
+          path: |
+            DID603Diagnostic/DID603Diagnostic.ipa
+            DID603Diagnostic/DID603Diagnostic.ipa.sha256
+            DID603Diagnostic/commit.txt
+            DID603Diagnostic/source.sha256
