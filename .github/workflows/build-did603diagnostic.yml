@@ -9,6 +9,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Offline synthetic Foundation serializer gate
+        run: clang -fobjc-arc -framework Foundation DID603Diagnostic/Tests/ErrorChainTests.m -o /tmp/did603-errorchain-tests && /tmp/did603-errorchain-tests
       - run: brew install ldid xz && git clone --recursive https://github.com/theos/theos.git ~/theos
       - run: export THEOS=~/theos; cd DID603Diagnostic; chmod +x build.sh; ./build.sh
       - run: git rev-parse HEAD > DID603Diagnostic/commit.txt; shasum -a 256 DID603Diagnostic/Sources/main.m > DID603Diagnostic/source.sha256
