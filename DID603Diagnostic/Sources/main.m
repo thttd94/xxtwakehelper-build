@@ -3,6 +3,11 @@
 #import <dlfcn.h>
 #include <string.h>
 #import <Security/Security.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/select.h>
 
 // Contract: pinned LS readonly object-return metadata getters; no target URL use.
 // Outcomes: 0 skipped, 1 receiver unavailable, 2 selector unavailable,
@@ -43,39 +48,6 @@ static id Query(id receiver, NSString *name, id argument, BOOL hasArgument,
  } @catch(NSException *exception){SetResult(r,prefix,4,signature,nil,expected);return nil;}
 }
 
-static const char *Unqualified(const char *t) { while(*t && strchr("rnNoORV",*t))t++;return t; }
-static BOOL ExactType(const char *t,const char *want) {return strcmp(Unqualified(t),want)==0;}
-static BOOL PointerType(const char *t,const char *want) {t=Unqualified(t);return *t=='^' && ExactType(t+1,want);}
-static void MCM(NSMutableDictionary *r) {
- r[@"mcm_framework_loaded"]=@((BOOL)(dlopen("/System/Library/PrivateFrameworks/MobileContainerManager.framework/MobileContainerManager",RTLD_LAZY|RTLD_LOCAL)!=NULL));
- Class cls=NSClassFromString(@"MCMAppDataContainer");Class parent=NSClassFromString(@"MCMContainer");
- BOOL signature=NO;
- r[@"mcm_class_valid"]=@((BOOL)(cls && parent && [cls isSubclassOfClass:parent]));
- if(![r[@"mcm_class_valid"] boolValue]){r[@"mcm_outcome"]=@1;return;}
- @try {
-  SEL sel=NSSelectorFromString(@"containerWithIdentifier:createIfNecessary:existed:error:");
-  if(![cls respondsToSelector:sel]){r[@"mcm_outcome"]=@2;return;}
-  NSMethodSignature *s=[cls methodSignatureForSelector:sel];
-  signature=s && s.numberOfArguments==6 && ExactType(s.methodReturnType,@encode(id)) && s.methodReturnLength==sizeof(id) &&
-   ExactType([s getArgumentTypeAtIndex:0],@encode(id)) && ExactType([s getArgumentTypeAtIndex:1],@encode(SEL)) &&
-   ExactType([s getArgumentTypeAtIndex:2],@encode(id)) && ExactType([s getArgumentTypeAtIndex:3],@encode(BOOL)) &&
-   PointerType([s getArgumentTypeAtIndex:4],@encode(BOOL)) && PointerType([s getArgumentTypeAtIndex:5],@encode(id));
-  if(signature){NSUInteger size=0;NSGetSizeAndAlignment([s getArgumentTypeAtIndex:3],&size,NULL);signature=size==sizeof(BOOL);}
-  r[@"mcm_signature_valid"]=@(signature);
-  if(!signature){r[@"mcm_outcome"]=@3;return;}
-  NSInvocation *inv=[NSInvocation invocationWithMethodSignature:s];inv.target=cls;inv.selector=sel;
-  id identifier=@"com.ss.iphone.ugc.Ame";BOOL create=NO;BOOL existed=NO;BOOL *existedPtr=&existed;
-  __autoreleasing id error=nil;id __autoreleasing *errorPtr=&error;
-  [inv setArgument:&identifier atIndex:2];[inv setArgument:&create atIndex:3];[inv setArgument:&existedPtr atIndex:4];[inv setArgument:&errorPtr atIndex:5];
-  [inv invoke];__unsafe_unretained id raw=nil;[inv getReturnValue:&raw];id value=raw;
-  r[@"mcm_outcome"]=@5;r[@"mcm_existed"]=@(existed);r[@"mcm_value_present"]=@((BOOL)(value!=nil));
-  r[@"mcm_value_expected_type"]=@((BOOL)(value && [value isKindOfClass:cls]));
-  r[@"mcm_value_type"]=@(!value?0:([value isKindOfClass:cls]?1:2));
-  r[@"mcm_error_present"]=@((BOOL)(error!=nil));BOOL validError=[error isKindOfClass:NSError.class];r[@"mcm_error_is_nserror"]=@(validError);
-  if(validError){NSError *e=error;r[@"mcm_error_code"]=@(e.code);r[@"mcm_error_posix"]=@((BOOL)[e.domain isEqualToString:NSPOSIXErrorDomain]);r[@"mcm_error_cocoa"]=@((BOOL)[e.domain isEqualToString:NSCocoaErrorDomain]);r[@"mcm_error_mcm"]=@((BOOL)[e.domain isEqualToString:@"MCMErrorDomain"]);r[@"mcm_error_other"]=@((BOOL)(![r[@"mcm_error_posix"] boolValue] && ![r[@"mcm_error_cocoa"] boolValue] && ![r[@"mcm_error_mcm"] boolValue]));}
- } @catch(NSException *exception){r[@"mcm_outcome"]=@4;}
-}
-
 static NSDictionary *Collect(void) {
  NSMutableDictionary *r=[@{@"schema":@3,@"receiver_available":@YES,@"framework_loaded":@NO,
   @"proxy_type_valid":@NO,@"identifier_match":@NO} mutableCopy];
@@ -95,53 +67,65 @@ static NSDictionary *Collect(void) {
  Query(proxy,@"groupContainerURLs",nil,NO,NSDictionary.class,@"groups",r);
  return r;
 }
+
+static NSMutableDictionary *State; static NSURL *ReportURL;
+static void Persist(void) {
+ NSData *b=[NSJSONSerialization dataWithJSONObject:State options:0 error:nil];
+ if(ReportURL && b && b.length<=16384){BOOL ok=[b writeToURL:ReportURL options:NSDataWritingAtomic error:nil];State[@"persistence_ok"]=@(ok);}
+}
+static void Mark(NSString *k,NSNumber *v){@synchronized(State){State[k]=v;Persist();}}
+static NSData *Snapshot(void){@synchronized(State){return [NSJSONSerialization dataWithJSONObject:State options:0 error:nil];}}
+static void Serve(void){dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{@autoreleasepool{
+ int fd=socket(AF_INET,SOCK_STREAM,0);if(fd<0){Mark(@"server_errno",@(errno));return;}
+ int one=1;setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&one,sizeof(one));
+ struct sockaddr_in addr={0};addr.sin_len=sizeof(addr);addr.sin_family=AF_INET;addr.sin_port=htons(59702);inet_pton(AF_INET,"192.17.4.1",&addr.sin_addr);
+ if(bind(fd,(struct sockaddr*)&addr,sizeof(addr)) || listen(fd,2)){Mark(@"server_errno",@(errno));close(fd);return;}
+ Mark(@"server_bound",@YES);NSDate *end=[NSDate dateWithTimeIntervalSinceNow:180];
+ for(int n=0;n<90 && [end timeIntervalSinceNow]>0;n++){@autoreleasepool{
+ fd_set set;FD_ZERO(&set);FD_SET(fd,&set);struct timeval tv={2,0};if(select(fd+1,&set,NULL,NULL,&tv)<=0)continue;
+ struct sockaddr_in peer={0};socklen_t len=sizeof(peer);int c=accept(fd,(struct sockaddr*)&peer,&len);if(c<0)continue;
+ struct in_addr expected;inet_pton(AF_INET,"192.17.1.10",&expected);if(peer.sin_addr.s_addr!=expected.s_addr){close(c);continue;}
+ setsockopt(c,SOL_SOCKET,SO_NOSIGPIPE,&one,sizeof(one));struct timeval timeout={2,0};setsockopt(c,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));setsockopt(c,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
+ char buf[2049]={0};ssize_t used=0;while(used<2048){ssize_t z=recv(c,buf+used,2048-used,0);if(z<=0)break;used+=z;buf[used]=0;if(strstr(buf,"\r\n\r\n"))break;}
+ const char *line="GET /did603/startup/4b2dfc11a1ccbf2ce8bb9ef5e0dd9eef HTTP/1.1\r\n";
+ if(used>0 && !strncmp(buf,line,strlen(line)) && strstr(buf,"\r\n\r\n") && !strstr(buf,"Transfer-Encoding:") && !strstr(buf,"Content-Length:")){
+ NSData *body=Snapshot();if(body && body.length<=16384){NSString *h=[NSString stringWithFormat:@"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",(unsigned long)body.length];NSMutableData *out=[[h dataUsingEncoding:NSUTF8StringEncoding] mutableCopy];[out appendData:body];NSUInteger off=0;while(off<out.length){ssize_t z=send(c,(const char*)out.bytes+off,out.length-off,0);if(z<=0)break;off+=z;}}
+ }close(c);
+ }}close(fd);Mark(@"server_closed",@YES);
+ }});}
 @interface AppDelegate:UIResponder<UIApplicationDelegate,NSURLSessionTaskDelegate>
 @property(nonatomic,strong)UIWindow *window;
 @property(nonatomic,strong)NSURLSession *session;
+@property(nonatomic,assign)BOOL started;
 @end
 @implementation AppDelegate
-
--(void)URLSession:(NSURLSession*)session didReceiveChallenge:(NSURLAuthenticationChallenge*)challenge completionHandler:(void(^)(NSURLSessionAuthChallengeDisposition,NSURLCredential*))completionHandler {
- NSURLProtectionSpace *space=challenge.protectionSpace;
- if(session!=self.session || ![space.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust] || ![space.host isEqualToString:@"192.17.1.10"] || space.port!=59701 || ![space.protocol isEqualToString:@"https"] || !space.serverTrust){completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge,nil);return;}
+-(void)URLSession:(NSURLSession*)session didReceiveChallenge:(NSURLAuthenticationChallenge*)challenge completionHandler:(void(^)(NSURLSessionAuthChallengeDisposition,NSURLCredential*))done {
+ Mark(@"trust_entry",@YES);NSURLProtectionSpace *space=challenge.protectionSpace;
+ BOOL guard=session==self.session && [space.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust] && [space.host isEqualToString:@"192.17.1.10"] && space.port==59701 && [space.protocol isEqualToString:@"https"] && space.serverTrust;
+ Mark(@"trust_guard",@(guard));if(!guard){done(NSURLSessionAuthChallengeCancelAuthenticationChallenge,nil);return;}
  SecTrustRef trust=space.serverTrust;SecCertificateRef leaf=SecTrustGetCertificateAtIndex(trust,0);
  NSData *actual=leaf?CFBridgingRelease(SecCertificateCopyData(leaf)):nil;
- NSData *pinned=[[NSData alloc]initWithBase64EncodedString:@"MIIC6TCCAdGgAwIBAgIUBjRAycMk3PbXKL1EJA1AW3lXzHcwDQYJKoZIhvcNAQELBQAwJDEiMCAGA1UEAwwZRElENjAzIGVwaGVtZXJhbCByZWNlaXZlcjAeFw0yNjA5MDkxODA4NDhaFw0yNjA5MDkxOTEzNDhaMCQxIjAgBgNVBAMMGURJRDYwMyBlcGhlbWVyYWwgcmVjZWl2ZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDAASAP3hTcvv1v8oXS02LdMWqAk/WSeKZqgEBrx0uAfND3IyjPyu8opWdcKjgabzTC9k7NFJjfVLGlxhn7Hyt78A10SGvzujJ9dWqg+dV+JDLjCeXUx00Xs7UieW01g1NilcZjG4B/xsPWGxFS820hPt4SqhihKRc4OVBtUmSZg4lm8v8irsu/5XoQiFM1KBYFE+4yWg+LEiBJXmCO6JNeU+WNqQTHkZXyomodHbKS0T23ijZZyKAt17OZlRzb9j76ZohHohzqwpP4g2oAFcDEG3W1DSCTQgde4hMHcGIqmfMqpU/PQ/cBnDT9XvTm0/8I5qRrKH5nigEtUiCzmvRTAgMBAAGjEzARMA8GA1UdEQQIMAaHBMARAQowDQYJKoZIhvcNAQELBQADggEBAFIQJw+ids70vY+E2mVW/UOh6Ja6T1FNqgAoqfSfAtCm5XoAuz3ATvCkkON8U62CdcN3W5/Afbz8gmbsCNPUHxw6qaUAmxaFZWjiz18JugB6P6D9Goz6ytZgpdedPOsqVpLkJsL5GxIS3uSTTTigcDU4KDyyV8J6o9VQkwBODceLL6N6R+PLBo8U6D/ic0gOarrdRa/l+WYUFFGv/3KKdiPeuYmHjNb7uQvSQIJzCcE7xyCffU8K0JcO5BhE4XmJOqmvGp7u5tOfiJImiSKqd/uMAKg08Tm95GmVzXq0VvWoejOseehw4mYFYGcXNktG68qVQOcegjGTRAW4XJ64eKA=" options:0];
- if(!actual || ![actual isEqualToData:pinned]){completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge,nil);return;}
- // Trust changes apply only to this challenge's SecTrust, never system trust.
- SecPolicyRef policy=SecPolicyCreateSSL(true,CFSTR("192.17.1.10"));SecTrustSetPolicies(trust,policy);CFRelease(policy);
- SecTrustSetAnchorCertificates(trust,(__bridge CFArrayRef)@[(__bridge id)leaf]);SecTrustSetAnchorCertificatesOnly(trust,true);
- if(!SecTrustEvaluateWithError(trust,NULL)){completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge,nil);return;}
- completionHandler(NSURLSessionAuthChallengeUseCredential,[NSURLCredential credentialForTrust:trust]);
+ NSData *pin=[[NSData alloc]initWithBase64EncodedString:@"MIIC6TCCAdGgAwIBAgIUD5FrLTon8dfHVbIrQPp9ZWc12bswDQYJKoZIhvcNAQELBQAwJDEiMCAGA1UEAwwZRElENjAzIHN0YXJ0dXAgZGlhZ25vc3RpYzAeFw0yNjA5MTAwMTA5MzJaFw0yNjA5MTAwMTQ0MzJaMCQxIjAgBgNVBAMMGURJRDYwMyBzdGFydHVwIGRpYWdub3N0aWMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDiAPNOUKfTHkVU+LDQciFeJrLHLN8memOA2ZehAtNhfEbnYmYR0qyGKm2DF+pzV6nOG5jmkbz92W4HZAqefsLWaw0tLZVYsY8r8SS7vw2t/MEVsHv5mzqeDHvuGweHuhmVSoCyoW2mHxsLdHGMt5dbhgM/Cd3AfCojrkFremTOemzkx/32JapnptMREWyBspemZtyCuwiE4tjNHlERrJMdXnUhx28tmnwttntAC7u7cr7CkdMY3PLLBUOiq6dI7515puQPhadWee8Jj0SrkYQ2KZ9DeyCQSGaAMS/2rxwjkiAqo6qmiEXq9souFw2/DzLF7V9k7UAYL0Gx+ahpPpZPAgMBAAGjEzARMA8GA1UdEQQIMAaHBMARAQowDQYJKoZIhvcNAQELBQADggEBAHXnY1nxEiF7v/QvOqhCAmb6R2O+HR7Y6schoj1Wk2jfyj8hMpEiIg8QjQd9Gqe3fRVXkjc7sWd6Pk19UPQTfGnGcKYLxX6nZSBwA+TNXdkXbg5llU4K0xoMS9rWP4Ke/x+5zdQ6fJiAFBUDSlUO3jqb8vCk8LJvIoyFDMNhI//9SUVGpq90UJrfK+tMdEOJUkKuT9GUMutDTb4enHAnseIIVsIYKU1/XdtCeyqEJ/4gaHcbmtDW4Ij7kcwlLwkyXr762W+tXU8ixVS0vNt3vNTSmIUJCfwQAzsotrqKTvLMG7IUeBzhA3lV034H72/icDvlVdUhOVUfKpsGcG+bARQ=" options:0];BOOL equal=actual && [actual isEqualToData:pin];Mark(@"trust_pin",@(equal));if(!equal){done(NSURLSessionAuthChallengeCancelAuthenticationChallenge,nil);return;}
+ SecPolicyRef policy=SecPolicyCreateSSL(true,CFSTR("192.17.1.10"));OSStatus a=SecTrustSetPolicies(trust,policy);CFRelease(policy);Mark(@"policy_status",@(a));
+ OSStatus b=SecTrustSetAnchorCertificates(trust,(__bridge CFArrayRef)@[(__bridge id)leaf]);Mark(@"anchor_status",@(b));OSStatus c=SecTrustSetAnchorCertificatesOnly(trust,true);Mark(@"anchor_only_status",@(c));
+ CFErrorRef error=NULL;BOOL ok=SecTrustEvaluateWithError(trust,&error);Mark(@"trust_evaluated",@YES);Mark(@"trust_ok",@(ok));if(error){Mark(@"trust_error_code",@(CFErrorGetCode(error)));CFRelease(error);}
+ if(a || b || c || !ok){done(NSURLSessionAuthChallengeCancelAuthenticationChallenge,nil);return;}done(NSURLSessionAuthChallengeUseCredential,[NSURLCredential credentialForTrust:trust]);
 }
-
--(void)URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task willPerformHTTPRedirection:(NSHTTPURLResponse*)response newRequest:(NSURLRequest*)request completionHandler:(void(^)(NSURLRequest*))completionHandler {
- completionHandler(nil); // Never forward report to redirects.
+-(void)URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task willPerformHTTPRedirection:(NSHTTPURLResponse*)response newRequest:(NSURLRequest*)request completionHandler:(void(^)(NSURLRequest*))done {done(nil);}
+-(void)startDiagnostic {
+ if(self.started)return;self.started=YES;
+ NSURLSessionConfiguration *config=[NSURLSessionConfiguration ephemeralSessionConfiguration];config.HTTPCookieStorage=nil;config.HTTPShouldSetCookies=NO;config.URLCredentialStorage=nil;config.URLCache=nil;config.connectionProxyDictionary=@{};config.timeoutIntervalForRequest=12;config.timeoutIntervalForResource=18;
+ self.session=[NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];NSMutableURLRequest *req=[NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://192.17.1.10:59701/did603/startup/4b2dfc11a1ccbf2ce8bb9ef5e0dd9eef"]];req.HTTPMethod=@"POST";req.HTTPBody=[@"{\"schema\":5,\"stage0\":true}" dataUsingEncoding:NSUTF8StringEncoding];[req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+ NSURLSessionDataTask *task=[self.session dataTaskWithRequest:req completionHandler:^(NSData *body,NSURLResponse *response,NSError *error){
+ Mark(@"error_domain",@(!error?0:[error.domain isEqualToString:NSURLErrorDomain]?1:[error.domain isEqualToString:NSPOSIXErrorDomain]?2:[error.domain isEqualToString:NSCocoaErrorDomain]?3:4));Mark(@"error_code",@(error.code));Mark(@"http_status",@([response isKindOfClass:NSHTTPURLResponse.class]?[(NSHTTPURLResponse*)response statusCode]:0));Mark(@"completion",@YES);[self.session finishTasksAndInvalidate];}];
+ Mark(@"task_created",@((BOOL)(task!=nil)));[task resume];Mark(@"task_resume",@YES);
+ dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{@autoreleasepool{Mark(@"collect_before",@YES);@try{NSDictionary *r=Collect();Mark(@"lookup_returned",@((BOOL)([r[@"lookup_outcome"] integerValue]==5)));Mark(@"identifier_match",@((BOOL)[r[@"identifier_match"] boolValue]));Mark(@"collect_after",@YES);}@catch(NSException *e){Mark(@"collect_exception",@YES);}}});
 }
 -(BOOL)application:(UIApplication*)application didFinishLaunchingWithOptions:(NSDictionary*)options {
- self.window=[[UIWindow alloc]initWithFrame:UIScreen.mainScreen.bounds];UIViewController *vc=[UIViewController new];self.window.rootViewController=vc;[self.window makeKeyAndVisible];
- UITextView *text=[[UITextView alloc]initWithFrame:vc.view.bounds];text.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;text.editable=NO;[vc.view addSubview:text];
- NSMutableDictionary *report=[Collect() mutableCopy];report[@"stage"]=@0;NSData *data=[NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
- text.text=[[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
- if(!data || data.length>16384)return YES;
- NSURL *endpoint=[NSURL URLWithString:@"https://192.17.1.10:59701/did603/f94de95617e773097ee572267e457658"];
- NSMutableURLRequest *req=[NSMutableURLRequest requestWithURL:endpoint cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:15];
- req.HTTPMethod=@"POST";req.HTTPBody=data;[req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
- NSURLSessionConfiguration *config=[NSURLSessionConfiguration ephemeralSessionConfiguration];
- config.HTTPCookieStorage=nil;config.HTTPShouldSetCookies=NO;config.URLCredentialStorage=nil;config.URLCache=nil;
- config.connectionProxyDictionary=@{};config.timeoutIntervalForRequest=15;config.timeoutIntervalForResource=20;
- self.session=[NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
- [[self.session dataTaskWithRequest:req completionHandler:^(NSData *body,NSURLResponse *response,NSError *error){
-  NSInteger status=[response isKindOfClass:NSHTTPURLResponse.class]?[(NSHTTPURLResponse*)response statusCode]:0;
-  dispatch_async(dispatch_get_main_queue(),^{text.text=[text.text stringByAppendingFormat:@"\nCallback HTTP: %ld; transport error: %ld",(long)status,(long)error.code];});
-  if(!error && status==204){
-   MCM(report);report[@"stage"]=@1;
-   NSData *finalData=[NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
-   if(finalData && finalData.length<=16384){NSMutableURLRequest *finalReq=[req mutableCopy];finalReq.HTTPBody=finalData;
-    [[self.session dataTaskWithRequest:finalReq completionHandler:^(NSData *b,NSURLResponse *v,NSError *e){[self.session finishTasksAndInvalidate];}] resume];
-   }else [self.session finishTasksAndInvalidate];
-  }else [self.session finishTasksAndInvalidate];
- }] resume];return YES;
+ State=[NSMutableDictionary new];for(NSString *k in @[@"did_finish",@"active",@"collect_before",@"collect_after",@"collect_exception",@"lookup_returned",@"identifier_match",@"task_created",@"task_resume",@"trust_entry",@"trust_guard",@"trust_pin",@"trust_evaluated",@"trust_ok",@"completion",@"persistence_ok",@"server_bound",@"server_closed"])State[k]=@NO; for(NSString *k in @[@"schema",@"build",@"server_errno",@"error_domain",@"error_code",@"http_status",@"policy_status",@"anchor_status",@"anchor_only_status",@"trust_error_code"])State[k]=@0; State[@"schema"]=@5;State[@"build"]=@5;State[@"did_finish"]=@YES;
+ NSURL *own=[[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] firstObject];ReportURL=[own URLByAppendingPathComponent:@"did603-startup-status.json" isDirectory:NO];Persist();Serve();
+ self.window=[[UIWindow alloc]initWithFrame:UIScreen.mainScreen.bounds];UIViewController *vc=[UIViewController new];self.window.rootViewController=vc;[self.window makeKeyAndVisible];return YES;
 }
+-(void)applicationDidBecomeActive:(UIApplication*)application{Mark(@"active",@YES);[self startDiagnostic];}
 @end
 int main(int argc,char **argv){@autoreleasepool{return UIApplicationMain(argc,argv,nil,NSStringFromClass(AppDelegate.class));}}
